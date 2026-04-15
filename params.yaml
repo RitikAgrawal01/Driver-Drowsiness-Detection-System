@@ -1,0 +1,43 @@
+# params.yaml — all configurable pipeline parameters
+# Referenced by dvc.yaml stages
+# Tracked by DVC for reproducibility
+
+frame_extraction:
+  fps: 30
+  output_dir: data/frames
+
+mediapipe:
+  min_detection_confidence: 0.5
+  min_tracking_confidence: 0.5
+
+features:
+  sliding_window_size: 30      # 1 second at 30fps
+  ear_threshold: 0.25
+  mar_threshold: 0.60
+  perclos_threshold: 0.80
+
+split:
+  test_size: 0.2
+  random_state: 42
+
+xgboost:
+  n_estimators: 200
+  max_depth: 6
+  learning_rate: 0.1
+  subsample: 0.8
+  colsample_bytree: 0.8
+  use_label_encoder: false
+  eval_metric: logloss
+
+svm:
+  kernel: rbf
+  C: 1.0
+  gamma: scale
+
+inference:
+  latency_target_ms: 200
+  confidence_threshold: 0.7
+
+drift:
+  score_threshold: 0.15
+  retrain_f1_drop: 0.02

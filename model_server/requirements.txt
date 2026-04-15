@@ -1,0 +1,20 @@
+# ── Web Framework ─────────────────────────────
+fastapi==0.110.0
+uvicorn[standard]==0.29.0
+
+# ── ML Models ─────────────────────────────────
+xgboost==2.0.3
+scikit-learn==1.4.2
+numpy==1.26.4
+pandas==2.2.2
+joblib==1.4.0
+
+# ── MLflow ────────────────────────────────────
+mlflow==2.11.1
+
+# ── Monitoring ────────────────────────────────
+prometheus-client==0.20.0
+
+# ── Config & Utilities ────────────────────────
+python-dotenv==1.0.1
+pydantic==2.7.0

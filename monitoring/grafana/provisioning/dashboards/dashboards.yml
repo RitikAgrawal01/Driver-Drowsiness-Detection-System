@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: "DDD Dashboards"
+    orgId: 1
+    folder: "Driver Drowsiness"
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards

@@ -1,0 +1,22 @@
+# ── Airflow core ──────────────────────────────
+apache-airflow==2.9.1
+apache-airflow-providers-apache-spark==4.7.1
+
+# ── PySpark ───────────────────────────────────
+pyspark==3.5.1
+
+# ── MediaPipe & CV ────────────────────────────
+mediapipe==0.10.11
+opencv-python-headless==4.9.0.80
+numpy==1.26.4
+
+# ── DVC ───────────────────────────────────────
+dvc==3.49.0
+
+# ── MLflow ────────────────────────────────────
+mlflow==2.11.1
+
+# ── Utilities ─────────────────────────────────
+pandas==2.2.2
+scipy==1.13.0
+python-dotenv==1.0.1

@@ -1,0 +1,4 @@
+# backend/routers/ — API route modules (Phase 5)
+# predict.py   — /predict endpoint
+# session.py   — /start-session, /stop-session endpoints
+# stream.py    — WebSocket /ws endpoint

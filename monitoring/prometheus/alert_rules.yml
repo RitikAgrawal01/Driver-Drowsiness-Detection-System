@@ -1,0 +1,43 @@
+groups:
+  - name: ddd_alerts
+    rules:
+
+      # Alert if error rate exceeds 5% (from guideline)
+      - alert: HighErrorRate
+        expr: rate(ddd_request_errors_total[5m]) / rate(ddd_requests_total[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} over the last 5 minutes."
+
+      # Alert if inference latency exceeds 200ms SLA (from guideline)
+      - alert: HighInferenceLatency
+        expr: histogram_quantile(0.95, rate(ddd_inference_latency_seconds_bucket[5m])) > 0.2
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Inference latency SLA breach"
+          description: "P95 inference latency is {{ $value }}s (SLA: 200ms)."
+
+      # Alert if data drift score exceeds threshold
+      - alert: DataDriftDetected
+        expr: ddd_feature_drift_score > 0.15
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Data drift detected — retraining may be needed"
+          description: "Feature drift score is {{ $value }} (threshold: 0.15)."
+
+      # Alert if model server is down
+      - alert: ModelServerDown
+        expr: up{job="ddd_model_server"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Model server is down"
+          description: "The model server has been unreachable for more than 1 minute."

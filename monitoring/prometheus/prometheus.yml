@@ -1,0 +1,35 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+# Load alert rules
+rule_files:
+  - "alert_rules.yml"
+
+# Alertmanager (configure later if needed)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets: ['alertmanager:9093']
+
+scrape_configs:
+
+  # Prometheus scrapes itself
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # FastAPI Backend
+  - job_name: "ddd_backend"
+    static_configs:
+      - targets: ["backend:8000"]
+    metrics_path: /metrics
+    scrape_interval: 10s
+
+  # Model Server
+  - job_name: "ddd_model_server"
+    static_configs:
+      - targets: ["model_server:8001"]
+    metrics_path: /metrics
+    scrape_interval: 10s

@@ -1,0 +1,5 @@
+# airflow/scripts/
+# extract_frames.py        — Phase 2: OpenCV video → frames
+# extract_landmarks.py     — Phase 2: MediaPipe → 468 landmark CSVs
+# feature_engineering.py   — Phase 2: PySpark EAR/MAR/PERCLOS/HeadPose
+# split_data.py            — Phase 2: train/test split

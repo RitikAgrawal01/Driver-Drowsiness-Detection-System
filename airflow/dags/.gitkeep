@@ -1,0 +1,3 @@
+# airflow/dags/
+# dag_data_pipeline.py   — Phase 2: frame extraction → landmarks → features
+# dag_retrain.py         — Phase 9: automated retraining trigger

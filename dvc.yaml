@@ -1,0 +1,104 @@
+stages:
+
+  # Stage 1: Extract frames from raw video files
+  extract_frames:
+    cmd: python airflow/scripts/extract_frames.py
+    deps:
+      - data/raw/
+      - airflow/scripts/extract_frames.py
+    params:
+      - params.yaml:
+          - frame_extraction.fps
+          - frame_extraction.output_dir
+    outs:
+      - data/frames/
+
+  # Stage 2: Run MediaPipe on extracted frames → landmark CSVs
+  extract_landmarks:
+    cmd: python airflow/scripts/extract_landmarks.py
+    deps:
+      - data/frames/
+      - airflow/scripts/extract_landmarks.py
+    params:
+      - params.yaml:
+          - mediapipe.min_detection_confidence
+          - mediapipe.min_tracking_confidence
+    outs:
+      - data/landmarks/
+
+  # Stage 3: PySpark feature engineering → EAR, PERCLOS, MAR, Head Pose
+  feature_engineering:
+    cmd: python airflow/scripts/feature_engineering.py
+    deps:
+      - data/landmarks/
+      - airflow/scripts/feature_engineering.py
+    params:
+      - params.yaml:
+          - features.sliding_window_size
+          - features.ear_threshold
+          - features.mar_threshold
+    outs:
+      - data/features/features.csv
+      - data/features/baseline.json
+
+  # Stage 4: Split data into train/test sets
+  split_data:
+    cmd: python airflow/scripts/split_data.py
+    deps:
+      - data/features/features.csv
+      - airflow/scripts/split_data.py
+    params:
+      - params.yaml:
+          - split.test_size
+          - split.random_state
+    outs:
+      - data/processed/train.csv
+      - data/processed/test.csv
+
+  # Stage 5: Train XGBoost model
+  train_xgboost:
+    cmd: python model_server/train_xgboost.py
+    deps:
+      - data/processed/train.csv
+      - model_server/train_xgboost.py
+    params:
+      - params.yaml:
+          - xgboost.n_estimators
+          - xgboost.max_depth
+          - xgboost.learning_rate
+          - xgboost.subsample
+    outs:
+      - models/xgboost_model.pkl
+    metrics:
+      - reports/xgboost_metrics.json:
+          cache: false
+
+  # Stage 6: Train SVM model
+  train_svm:
+    cmd: python model_server/train_svm.py
+    deps:
+      - data/processed/train.csv
+      - model_server/train_svm.py
+    params:
+      - params.yaml:
+          - svm.kernel
+          - svm.C
+          - svm.gamma
+    outs:
+      - models/svm_model.pkl
+    metrics:
+      - reports/svm_metrics.json:
+          cache: false
+
+  # Stage 7: Evaluate and compare models
+  evaluate:
+    cmd: python model_server/evaluate.py
+    deps:
+      - data/processed/test.csv
+      - models/xgboost_model.pkl
+      - models/svm_model.pkl
+      - model_server/evaluate.py
+    outs:
+      - reports/evaluation_report.json
+      - reports/confusion_matrix_xgb.png
+      - reports/confusion_matrix_svm.png

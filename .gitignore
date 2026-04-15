@@ -1,0 +1,71 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+ENV/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# DVC
+/tmp/
+.dvc/cache/
+.dvc/tmp/
+
+# MLflow
+mlruns/
+mlartifacts/
+
+# Logs
+logs/
+*.log
+
+# Docker
+.docker/
+
+# Node / React
+frontend/node_modules/
+frontend/.env.local
+frontend/dist/
+frontend/build/
+
+# Data (tracked by DVC, not Git)
+data/raw/
+data/landmarks/
+data/features/
+data/processed/
+*.csv
+*.parquet
+*.h5
+*.pkl
+*.joblib
+
+# Model artifacts (tracked by DVC/MLflow)
+models/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# OS
+.DS_Store
