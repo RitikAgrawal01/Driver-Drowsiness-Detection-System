@@ -50,12 +50,12 @@ frontend/dist/
 frontend/build/
 
 # Data (tracked by DVC, not Git)
+data/
 data/raw/
 data/landmarks/
 data/features/
 data/processed/
 data/frames
-data/
 *.csv
 *.parquet
 *.h5
