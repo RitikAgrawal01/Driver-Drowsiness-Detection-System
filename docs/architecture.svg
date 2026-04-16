@@ -1,0 +1,292 @@
+<svg viewBox="0 0 1100 780" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
+  <!-- Background -->
+  <rect width="1100" height="780" fill="#0D1117"/>
+
+  <!-- Title -->
+  <text x="550" y="38" text-anchor="middle" font-size="20" font-weight="bold" fill="#E6EDF3">Driver Drowsiness Detection System — Architecture</text>
+  <text x="550" y="58" text-anchor="middle" font-size="12" fill="#8B949E">End-to-End MLOps Pipeline</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- LAYER LABELS -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <text x="18" y="135" font-size="10" fill="#8B949E" transform="rotate(-90,18,135)">FRONTEND</text>
+  <text x="18" y="290" font-size="10" fill="#8B949E" transform="rotate(-90,18,290)">BACKEND</text>
+  <text x="18" y="460" font-size="10" fill="#8B949E" transform="rotate(-90,18,460)">ML LAYER</text>
+  <text x="18" y="630" font-size="10" fill="#8B949E" transform="rotate(-90,18,630)">MLOPS</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- ROW 1: FRONTEND -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- React App box -->
+  <rect x="50" y="75" width="1000" height="120" rx="10" fill="#161B22" stroke="#30A46C" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <text x="70" y="93" font-size="10" fill="#30A46C" font-weight="bold">FRONTEND — React + Vite (port 3000)</text>
+
+  <!-- Page boxes inside frontend -->
+  <!-- Monitor -->
+  <rect x="70" y="100" width="190" height="82" rx="6" fill="#0D2A1E" stroke="#30A46C" stroke-width="1"/>
+  <text x="165" y="120" text-anchor="middle" font-size="11" font-weight="bold" fill="#30A46C">Live Monitor</text>
+  <text x="165" y="136" text-anchor="middle" font-size="9" fill="#8B949E">Webcam feed + EAR/MAR</text>
+  <text x="165" y="149" text-anchor="middle" font-size="9" fill="#8B949E">gauges + drowsiness alert</text>
+  <text x="165" y="162" text-anchor="middle" font-size="9" fill="#8B949E">banner + audio alert</text>
+
+  <!-- Pipeline Console -->
+  <rect x="278" y="100" width="190" height="82" rx="6" fill="#0D2A1E" stroke="#30A46C" stroke-width="1"/>
+  <text x="373" y="120" text-anchor="middle" font-size="11" font-weight="bold" fill="#30A46C">Pipeline Console</text>
+  <text x="373" y="136" text-anchor="middle" font-size="9" fill="#8B949E">Airflow DAG visualization</text>
+  <text x="373" y="149" text-anchor="middle" font-size="9" fill="#8B949E">Pipeline run history</text>
+  <text x="373" y="162" text-anchor="middle" font-size="9" fill="#8B949E">Task error/success log</text>
+
+  <!-- Monitoring -->
+  <rect x="486" y="100" width="190" height="82" rx="6" fill="#0D2A1E" stroke="#30A46C" stroke-width="1"/>
+  <text x="581" y="120" text-anchor="middle" font-size="11" font-weight="bold" fill="#30A46C">Monitoring Dashboard</text>
+  <text x="581" y="136" text-anchor="middle" font-size="9" fill="#8B949E">Grafana panels (iframe)</text>
+  <text x="581" y="149" text-anchor="middle" font-size="9" fill="#8B949E">Latency / drift / error</text>
+  <text x="581" y="162" text-anchor="middle" font-size="9" fill="#8B949E">rate charts</text>
+
+  <!-- Model Registry -->
+  <rect x="694" y="100" width="190" height="82" rx="6" fill="#0D2A1E" stroke="#30A46C" stroke-width="1"/>
+  <text x="789" y="120" text-anchor="middle" font-size="11" font-weight="bold" fill="#30A46C">Model Registry</text>
+  <text x="789" y="136" text-anchor="middle" font-size="9" fill="#8B949E">MLflow experiments list</text>
+  <text x="789" y="149" text-anchor="middle" font-size="9" fill="#8B949E">Model metrics compare</text>
+  <text x="789" y="162" text-anchor="middle" font-size="9" fill="#8B949E">Production model info</text>
+
+  <!-- User Manual -->
+  <rect x="902" y="100" width="130" height="82" rx="6" fill="#1A1A2E" stroke="#8B949E" stroke-width="1" stroke-dasharray="4,2"/>
+  <text x="967" y="126" text-anchor="middle" font-size="11" font-weight="bold" fill="#8B949E">User Manual</text>
+  <text x="967" y="142" text-anchor="middle" font-size="9" fill="#636E7B">Non-technical</text>
+  <text x="967" y="155" text-anchor="middle" font-size="9" fill="#636E7B">usage guide</text>
+  <text x="967" y="168" text-anchor="middle" font-size="9" fill="#636E7B">(docs/)</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- ARROWS: Frontend → Backend (REST + WebSocket) -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <line x1="310" y1="197" x2="310" y2="228" stroke="#00BFFF" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="316" y="216" font-size="9" fill="#00BFFF">REST + WebSocket</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- ROW 2: BACKEND -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <rect x="50" y="228" width="700" height="130" rx="10" fill="#161B22" stroke="#00BFFF" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <text x="70" y="246" font-size="10" fill="#00BFFF" font-weight="bold">BACKEND — FastAPI (port 8000)</text>
+
+  <!-- WebSocket Handler -->
+  <rect x="68" y="253" width="155" height="92" rx="6" fill="#0A1929" stroke="#00BFFF" stroke-width="1"/>
+  <text x="145" y="272" text-anchor="middle" font-size="10" font-weight="bold" fill="#00BFFF">WebSocket Handler</text>
+  <text x="145" y="288" text-anchor="middle" font-size="9" fill="#8B949E">/ws endpoint</text>
+  <text x="145" y="301" text-anchor="middle" font-size="9" fill="#8B949E">Frame receiver</text>
+  <text x="145" y="314" text-anchor="middle" font-size="9" fill="#8B949E">Session manager</text>
+  <text x="145" y="327" text-anchor="middle" font-size="9" fill="#8B949E">Alert dispatcher</text>
+
+  <!-- Feature Extractor -->
+  <rect x="238" y="253" width="155" height="92" rx="6" fill="#0A1929" stroke="#00BFFF" stroke-width="1"/>
+  <text x="315" y="272" text-anchor="middle" font-size="10" font-weight="bold" fill="#00BFFF">Feature Extractor</text>
+  <text x="315" y="288" text-anchor="middle" font-size="9" fill="#8B949E">MediaPipe 468 pts</text>
+  <text x="315" y="301" text-anchor="middle" font-size="9" fill="#8B949E">EAR / MAR</text>
+  <text x="315" y="314" text-anchor="middle" font-size="9" fill="#8B949E">PERCLOS</text>
+  <text x="315" y="327" text-anchor="middle" font-size="9" fill="#8B949E">Head Pose (pitch/yaw/roll)</text>
+
+  <!-- Drift Detector -->
+  <rect x="408" y="253" width="155" height="92" rx="6" fill="#0A1929" stroke="#00BFFF" stroke-width="1"/>
+  <text x="485" y="272" text-anchor="middle" font-size="10" font-weight="bold" fill="#00BFFF">Drift Detector</text>
+  <text x="485" y="288" text-anchor="middle" font-size="9" fill="#8B949E">vs baseline.json</text>
+  <text x="485" y="301" text-anchor="middle" font-size="9" fill="#8B949E">KL-divergence score</text>
+  <text x="485" y="314" text-anchor="middle" font-size="9" fill="#8B949E">Prometheus gauge</text>
+  <text x="485" y="327" text-anchor="middle" font-size="9" fill="#8B949E">emit: drift_score</text>
+
+  <!-- REST API / Prometheus -->
+  <rect x="578" y="253" width="155" height="92" rx="6" fill="#0A1929" stroke="#00BFFF" stroke-width="1"/>
+  <text x="655" y="272" text-anchor="middle" font-size="10" font-weight="bold" fill="#00BFFF">REST API + /metrics</text>
+  <text x="655" y="288" text-anchor="middle" font-size="9" fill="#8B949E">/predict  /health</text>
+  <text x="655" y="301" text-anchor="middle" font-size="9" fill="#8B949E">/ready  /status</text>
+  <text x="655" y="314" text-anchor="middle" font-size="9" fill="#8B949E">Prom: latency hist</text>
+  <text x="655" y="327" text-anchor="middle" font-size="9" fill="#8B949E">Prom: request counter</text>
+
+  <!-- Logger box (right of backend) -->
+  <rect x="790" y="228" width="130" height="130" rx="10" fill="#161B22" stroke="#E6A817" stroke-width="1.5"/>
+  <text x="855" y="248" text-anchor="middle" font-size="10" fill="#E6A817" font-weight="bold">Logging</text>
+  <text x="855" y="264" text-anchor="middle" font-size="9" fill="#8B949E">structlog</text>
+  <text x="855" y="278" text-anchor="middle" font-size="9" fill="#8B949E">Rotating file</text>
+  <text x="855" y="292" text-anchor="middle" font-size="9" fill="#8B949E">logs/backend/</text>
+  <text x="855" y="310" text-anchor="middle" font-size="10" fill="#E6A817" font-weight="bold">Exception</text>
+  <text x="855" y="325" text-anchor="middle" font-size="10" fill="#E6A817" font-weight="bold">Handling</text>
+  <text x="855" y="341" text-anchor="middle" font-size="9" fill="#8B949E">HTTP 4xx/5xx</text>
+
+  <!-- Backend → Logger -->
+  <line x1="750" y1="293" x2="788" y2="293" stroke="#E6A817" stroke-width="1" marker-end="url(#arrow-yellow)"/>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- ARROW: Backend → Model Server -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <line x1="400" y1="358" x2="400" y2="388" stroke="#FF6B6B" stroke-width="1.5" marker-end="url(#arrow-red)"/>
+  <text x="406" y="377" font-size="9" fill="#FF6B6B">REST /predict</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- ROW 3: ML LAYER -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- Model Server -->
+  <rect x="50" y="388" width="340" height="120" rx="10" fill="#161B22" stroke="#FF6B6B" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <text x="70" y="406" font-size="10" fill="#FF6B6B" font-weight="bold">MODEL SERVER (port 8001)</text>
+
+  <rect x="68" y="413" width="145" height="82" rx="6" fill="#1E0A0A" stroke="#FF6B6B" stroke-width="1"/>
+  <text x="140" y="432" text-anchor="middle" font-size="10" font-weight="bold" fill="#FF6B6B">XGBoost Model</text>
+  <text x="140" y="448" text-anchor="middle" font-size="9" fill="#8B949E">n_estimators=200</text>
+  <text x="140" y="461" text-anchor="middle" font-size="9" fill="#8B949E">Sliding window</text>
+  <text x="140" y="474" text-anchor="middle" font-size="9" fill="#8B949E">features input</text>
+  <text x="140" y="487" text-anchor="middle" font-size="9" fill="#8B949E">/health  /ready</text>
+
+  <rect x="228" y="413" width="145" height="82" rx="6" fill="#1E0A0A" stroke="#FF6B6B" stroke-width="1"/>
+  <text x="300" y="432" text-anchor="middle" font-size="10" font-weight="bold" fill="#FF6B6B">SVM Model</text>
+  <text x="300" y="448" text-anchor="middle" font-size="9" fill="#8B949E">RBF kernel</text>
+  <text x="300" y="461" text-anchor="middle" font-size="9" fill="#8B949E">Comparison /</text>
+  <text x="300" y="474" text-anchor="middle" font-size="9" fill="#8B949E">fallback model</text>
+  <text x="300" y="487" text-anchor="middle" font-size="9" fill="#8B949E">MLflow registry</text>
+
+  <!-- MLflow -->
+  <rect x="430" y="388" width="260" height="120" rx="10" fill="#161B22" stroke="#A78BFA" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <text x="450" y="406" font-size="10" fill="#A78BFA" font-weight="bold">MLflow (port 5000)</text>
+
+  <rect x="448" y="413" width="110" height="82" rx="6" fill="#1A0A2E" stroke="#A78BFA" stroke-width="1"/>
+  <text x="503" y="432" text-anchor="middle" font-size="10" font-weight="bold" fill="#A78BFA">Experiment</text>
+  <text x="503" y="445" text-anchor="middle" font-size="10" font-weight="bold" fill="#A78BFA">Tracking</text>
+  <text x="503" y="461" text-anchor="middle" font-size="9" fill="#8B949E">params / metrics</text>
+  <text x="503" y="474" text-anchor="middle" font-size="9" fill="#8B949E">artifacts / plots</text>
+  <text x="503" y="487" text-anchor="middle" font-size="9" fill="#8B949E">autolog + manual</text>
+
+  <rect x="572" y="413" width="100" height="82" rx="6" fill="#1A0A2E" stroke="#A78BFA" stroke-width="1"/>
+  <text x="622" y="432" text-anchor="middle" font-size="10" font-weight="bold" fill="#A78BFA">Model</text>
+  <text x="622" y="445" text-anchor="middle" font-size="10" font-weight="bold" fill="#A78BFA">Registry</text>
+  <text x="622" y="461" text-anchor="middle" font-size="9" fill="#8B949E">Staging</text>
+  <text x="622" y="474" text-anchor="middle" font-size="9" fill="#8B949E">Production</text>
+  <text x="622" y="487" text-anchor="middle" font-size="9" fill="#8B949E">versioned .pkl</text>
+
+  <!-- Model Server → MLflow -->
+  <line x1="392" y1="448" x2="447" y2="448" stroke="#A78BFA" stroke-width="1.5" marker-end="url(#arrow-purple)"/>
+  <text x="410" y="443" font-size="9" fill="#A78BFA">load model</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- ROW 4: MLOPS LAYER -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- Airflow -->
+  <rect x="50" y="548" width="310" height="200" rx="10" fill="#161B22" stroke="#F97316" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <text x="70" y="566" font-size="10" fill="#F97316" font-weight="bold">APACHE AIRFLOW (port 8080)</text>
+
+  <rect x="68" y="573" width="130" height="162" rx="6" fill="#1E1200" stroke="#F97316" stroke-width="1"/>
+  <text x="133" y="592" text-anchor="middle" font-size="10" font-weight="bold" fill="#F97316">Data Pipeline DAG</text>
+  <text x="133" y="608" text-anchor="middle" font-size="9" fill="#8B949E">1. Extract frames</text>
+  <text x="133" y="621" text-anchor="middle" font-size="9" fill="#8B949E">   (OpenCV)</text>
+  <text x="133" y="634" text-anchor="middle" font-size="9" fill="#8B949E">2. MediaPipe</text>
+  <text x="133" y="647" text-anchor="middle" font-size="9" fill="#8B949E">   468 landmarks</text>
+  <text x="133" y="660" text-anchor="middle" font-size="9" fill="#8B949E">3. PySpark</text>
+  <text x="133" y="673" text-anchor="middle" font-size="9" fill="#8B949E">   EAR/MAR/PERCLOS</text>
+  <text x="133" y="686" text-anchor="middle" font-size="9" fill="#8B949E">4. DVC push</text>
+  <text x="133" y="699" text-anchor="middle" font-size="9" fill="#8B949E">   versioned output</text>
+  <text x="133" y="718" text-anchor="middle" font-size="9" fill="#8B949E">Throughput logged</text>
+
+  <rect x="212" y="573" width="130" height="162" rx="6" fill="#1E1200" stroke="#F97316" stroke-width="1"/>
+  <text x="277" y="592" text-anchor="middle" font-size="10" font-weight="bold" fill="#F97316">Retrain DAG</text>
+  <text x="277" y="608" text-anchor="middle" font-size="9" fill="#8B949E">Trigger: Prom</text>
+  <text x="277" y="621" text-anchor="middle" font-size="9" fill="#8B949E">alert / F1 drop</text>
+  <text x="277" y="638" text-anchor="middle" font-size="9" fill="#8B949E">DVC pull data</text>
+  <text x="277" y="651" text-anchor="middle" font-size="9" fill="#8B949E">Retrain model</text>
+  <text x="277" y="664" text-anchor="middle" font-size="9" fill="#8B949E">Evaluate vs</text>
+  <text x="277" y="677" text-anchor="middle" font-size="9" fill="#8B949E">production</text>
+  <text x="277" y="692" text-anchor="middle" font-size="9" fill="#8B949E">Auto-promote</text>
+  <text x="277" y="705" text-anchor="middle" font-size="9" fill="#8B949E">if F1 +2%</text>
+
+  <!-- DVC -->
+  <rect x="380" y="548" width="220" height="200" rx="10" fill="#161B22" stroke="#06B6D4" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <text x="400" y="566" font-size="10" fill="#06B6D4" font-weight="bold">DVC PIPELINE</text>
+
+  <rect x="398" y="573" width="184" height="162" rx="6" fill="#0A1E22" stroke="#06B6D4" stroke-width="1"/>
+  <text x="490" y="592" text-anchor="middle" font-size="10" font-weight="bold" fill="#06B6D4">dvc.yaml stages</text>
+  <text x="490" y="610" text-anchor="middle" font-size="9" fill="#8B949E">extract_frames</text>
+  <text x="490" y="623" text-anchor="middle" font-size="9" fill="#636E7B">↓</text>
+  <text x="490" y="636" text-anchor="middle" font-size="9" fill="#8B949E">extract_landmarks</text>
+  <text x="490" y="649" text-anchor="middle" font-size="9" fill="#636E7B">↓</text>
+  <text x="490" y="662" text-anchor="middle" font-size="9" fill="#8B949E">feature_engineering</text>
+  <text x="490" y="675" text-anchor="middle" font-size="9" fill="#636E7B">↓</text>
+  <text x="490" y="688" text-anchor="middle" font-size="9" fill="#8B949E">split_data</text>
+  <text x="490" y="701" text-anchor="middle" font-size="9" fill="#636E7B">↓</text>
+  <text x="490" y="714" text-anchor="middle" font-size="9" fill="#8B949E">train_xgboost / train_svm</text>
+  <text x="490" y="727" text-anchor="middle" font-size="9" fill="#636E7B">↓</text>
+  <text x="490" y="718" text-anchor="middle" font-size="9" fill="#8B949E">evaluate</text>
+
+  <!-- Monitoring stack -->
+  <rect x="620" y="548" width="430" height="200" rx="10" fill="#161B22" stroke="#EF4444" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <text x="640" y="566" font-size="10" fill="#EF4444" font-weight="bold">MONITORING STACK</text>
+
+  <!-- Prometheus -->
+  <rect x="638" y="573" width="190" height="162" rx="6" fill="#1E0505" stroke="#EF4444" stroke-width="1"/>
+  <text x="733" y="592" text-anchor="middle" font-size="10" font-weight="bold" fill="#EF4444">Prometheus (port 9090)</text>
+  <text x="733" y="610" text-anchor="middle" font-size="9" fill="#8B949E">Scrapes /metrics every 10s</text>
+  <text x="733" y="625" text-anchor="middle" font-size="9" fill="#8B949E">inference_latency_seconds</text>
+  <text x="733" y="638" text-anchor="middle" font-size="9" fill="#8B949E">prediction_confidence</text>
+  <text x="733" y="651" text-anchor="middle" font-size="9" fill="#8B949E">feature_drift_score</text>
+  <text x="733" y="664" text-anchor="middle" font-size="9" fill="#8B949E">request_errors_total</text>
+  <text x="733" y="677" text-anchor="middle" font-size="9" fill="#8B949E">active_sessions</text>
+  <text x="733" y="695" text-anchor="middle" font-size="9" fill="#EF4444" font-weight="bold">Alert Rules:</text>
+  <text x="733" y="708" text-anchor="middle" font-size="9" fill="#8B949E">error_rate &gt; 5%</text>
+  <text x="733" y="721" text-anchor="middle" font-size="9" fill="#8B949E">drift_score &gt; 0.15</text>
+  <text x="733" y="734" text-anchor="middle" font-size="9" fill="#8B949E">latency_p95 &gt; 200ms</text>
+
+  <!-- Grafana -->
+  <rect x="842" y="573" width="190" height="162" rx="6" fill="#1E0505" stroke="#F97316" stroke-width="1"/>
+  <text x="937" y="592" text-anchor="middle" font-size="10" font-weight="bold" fill="#F97316">Grafana (port 3001)</text>
+  <text x="937" y="610" text-anchor="middle" font-size="9" fill="#8B949E">Datasource: Prometheus</text>
+  <text x="937" y="625" text-anchor="middle" font-size="9" fill="#8B949E">Panel: Latency histogram</text>
+  <text x="937" y="638" text-anchor="middle" font-size="9" fill="#8B949E">Panel: Confidence dist.</text>
+  <text x="937" y="651" text-anchor="middle" font-size="9" fill="#8B949E">Panel: Drift score gauge</text>
+  <text x="937" y="664" text-anchor="middle" font-size="9" fill="#8B949E">Panel: Error rate %</text>
+  <text x="937" y="677" text-anchor="middle" font-size="9" fill="#8B949E">Panel: Active sessions</text>
+  <text x="937" y="695" text-anchor="middle" font-size="9" fill="#F97316" font-weight="bold">Provisioned via:</text>
+  <text x="937" y="708" text-anchor="middle" font-size="9" fill="#8B949E">datasources/*.yml</text>
+  <text x="937" y="721" text-anchor="middle" font-size="9" fill="#8B949E">dashboards/*.yml</text>
+
+  <!-- Prom → Grafana arrow -->
+  <line x1="830" y1="654" x2="840" y2="654" stroke="#F97316" stroke-width="1.5" marker-end="url(#arrow-orange)"/>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- VERTICAL CONNECTION ARROWS -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- Backend → Airflow (data) -->
+  <line x1="200" y1="508" x2="200" y2="546" stroke="#F97316" stroke-width="1" stroke-dasharray="4,2" marker-end="url(#arrow-orange)"/>
+
+  <!-- MLflow → DVC (artifacts) -->
+  <line x1="490" y1="510" x2="490" y2="546" stroke="#06B6D4" stroke-width="1" stroke-dasharray="4,2" marker-end="url(#arrow-cyan)"/>
+
+  <!-- Backend → Prometheus -->
+  <line x1="655" y1="360" x2="733" y2="546" stroke="#EF4444" stroke-width="1" stroke-dasharray="4,2" marker-end="url(#arrow-red2)"/>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- DOCKER COMPOSE BRACE -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <rect x="36" y="68" width="1052" height="692" rx="14" fill="none" stroke="#30363D" stroke-width="1" stroke-dasharray="8,4"/>
+  <text x="940" y="765" font-size="10" fill="#30363D">docker-compose.yml — 7 services on ddd_network</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- ARROW MARKERS -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <defs>
+    <marker id="arrow-blue" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#00BFFF"/>
+    </marker>
+    <marker id="arrow-red" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#FF6B6B"/>
+    </marker>
+    <marker id="arrow-red2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#EF4444"/>
+    </marker>
+    <marker id="arrow-purple" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#A78BFA"/>
+    </marker>
+    <marker id="arrow-orange" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#F97316"/>
+    </marker>
+    <marker id="arrow-cyan" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#06B6D4"/>
+    </marker>
+    <marker id="arrow-yellow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#E6A817"/>
+    </marker>
+  </defs>
+</svg>

@@ -54,6 +54,8 @@ data/raw/
 data/landmarks/
 data/features/
 data/processed/
+data/frames
+data/
 *.csv
 *.parquet
 *.h5
