@@ -1,4 +1,6 @@
 [core]
+    autostage = true
+    analytics = false
     remote = localremote
 ['remote "localremote"']
-    url = /home/ritik/dvc_remote
+    url = /home/ritik/dvc_remote_ddd
