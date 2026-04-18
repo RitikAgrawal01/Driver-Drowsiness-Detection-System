@@ -1,15 +1,15 @@
 {
-  "total_samples": 5998,
-  "train_samples": 4798,
-  "test_samples": 1200,
+  "total_samples": 27783,
+  "train_samples": 22226,
+  "test_samples": 5557,
   "test_size": 0.2,
   "random_state": 42,
   "train_label_dist": {
-    "0": 2399,
-    "1": 2399
+    "1": 11157,
+    "0": 11069
   },
   "test_label_dist": {
-    "0": 600,
-    "1": 600
+    "1": 2790,
+    "0": 2767
   }
 }

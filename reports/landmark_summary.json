@@ -1,0 +1,19 @@
+{
+  "total_frames_attempted": 28842,
+  "total_frames_succeeded": 27807,
+  "total_frames_no_face": 1035,
+  "detection_rate_pct": 96.41,
+  "throughput_fps": 42.8,
+  "elapsed_sec": 673.7,
+  "per_label_counts": {
+    "drowsy": {
+      "attempted": 14160,
+      "succeeded": 13959
+    },
+    "alert": {
+      "attempted": 14682,
+      "succeeded": 13848
+    }
+  },
+  "output_csv": "data/landmarks/landmarks.csv"
+}

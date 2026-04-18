@@ -234,17 +234,25 @@ def validate_output(frames_dir: str) -> bool:
 
 if __name__ == "__main__":
     import json
+    import argparse
 
-    summary = run_extraction()
+    # 1. Handle command line arguments
+    parser = argparse.ArgumentParser(description="Extract frames from videos.")
+    parser.add_argument("--fps", type=int, default=TARGET_FPS, help="Target FPS for extraction")
+    args = parser.parse_args()
 
-    # Save summary for DVC metrics and Airflow XCom
+    # 2. Run extraction with the dynamic FPS
+    logger.info(f"Starting extraction with target_fps={args.fps}")
+    summary = run_extraction(target_fps=args.fps)
+
+    # 3. Save summary for DVC metrics
     os.makedirs("reports", exist_ok=True)
     summary_path = "reports/extraction_summary.json"
     with open(summary_path, "w") as f:
         json.dump(summary, f, indent=2)
     logger.info(f"Summary saved to {summary_path}")
 
-    # Validate output
+    # 4. Validate output
     ok = validate_output(FRAMES_DIR)
     if not ok:
         logger.error("Output validation failed!")

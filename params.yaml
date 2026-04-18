@@ -1,43 +1,76 @@
-# params.yaml — all configurable pipeline parameters
-# Referenced by dvc.yaml stages
-# Tracked by DVC for reproducibility
+# ─────────────────────────────────────────────────────────────────────────────
+# params.yaml — All DDD Pipeline Parameters
+# ─────────────────────────────────────────────────────────────────────────────
+# Referenced by dvc.yaml stages for reproducibility.
+# Changing any value here + running `dvc repro` re-runs only
+# the affected downstream stages automatically.
+#
+# Track experiment variants by changing these values and running:
+#   dvc repro
+#   dvc metrics show
+#   dvc metrics diff
+# ─────────────────────────────────────────────────────────────────────────────
 
+# ── Frame Extraction ──────────────────────────────────────────────────────────
 frame_extraction:
-  fps: 30
-  output_dir: data/frames
+  fps: 2                         # frames per second to extract from video
+  output_dir: data/frames        # where extracted frames are saved
 
+# ── MediaPipe FaceMesh ────────────────────────────────────────────────────────
 mediapipe:
-  min_detection_confidence: 0.5
-  min_tracking_confidence: 0.5
+  min_detection_confidence: 0.5  # confidence threshold for face detection
+  min_tracking_confidence: 0.5   # confidence threshold for landmark tracking
+  refine_landmarks: true         # enable iris landmarks (468 → 478 points)
+  max_num_faces: 1               # only track the driver's face
 
+# ── Feature Engineering ───────────────────────────────────────────────────────
 features:
-  sliding_window_size: 30      # 1 second at 30fps
-  ear_threshold: 0.25
-  mar_threshold: 0.60
-  perclos_threshold: 0.80
+  sliding_window_size: 2         # frames per window (1 second at 2fps)
+  ear_threshold: 0.25            # EAR below this → eye considered closed
+  mar_threshold: 0.60            # MAR above this → yawn detected
+  perclos_threshold: 0.80        # PERCLOS above this → strong drowsiness
 
+# ── Train/Test Split ──────────────────────────────────────────────────────────
 split:
-  test_size: 0.2
-  random_state: 42
+  test_size: 0.2                 # 20% held out for test
+  random_state: 42               # seed for reproducibility
 
+# ── XGBoost Hyperparameters ───────────────────────────────────────────────────
 xgboost:
   n_estimators: 200
   max_depth: 6
   learning_rate: 0.1
   subsample: 0.8
   colsample_bytree: 0.8
-  use_label_encoder: false
+  min_child_weight: 1
+  gamma: 0
+  reg_alpha: 0                   # L1 regularisation
+  reg_lambda: 1                  # L2 regularisation
   eval_metric: logloss
+  early_stopping_rounds: 20      # stop if val loss doesn't improve
+  scale_pos_weight: 1            # set to n_alert/n_drowsy if class imbalanced
 
+# ── SVM Hyperparameters ───────────────────────────────────────────────────────
 svm:
-  kernel: rbf
-  C: 1.0
-  gamma: scale
+  kernel: rbf                    # rbf | linear | poly
+  C: 1.0                         # regularisation parameter
+  gamma: scale                   # kernel coefficient: scale | auto | float
+  probability: true              # enable predict_proba (needed for confidence score)
+  class_weight: balanced         # handle class imbalance automatically
+  cache_size: 500                # MB of kernel cache
 
+# ── Inference ─────────────────────────────────────────────────────────────────
 inference:
-  latency_target_ms: 200
-  confidence_threshold: 0.7
+  latency_target_ms: 200         # SLA: P95 inference must be below this
+  confidence_threshold: 0.7      # minimum confidence to trigger drowsy alert
 
+# ── Drift Detection ───────────────────────────────────────────────────────────
 drift:
-  score_threshold: 0.15
-  retrain_f1_drop: 0.02
+  score_threshold: 0.15          # KL-divergence above this → DataDriftDetected alert
+  retrain_f1_drop: 0.02          # retrain if production F1 drops by more than 2%
+  window_minutes: 5              # rolling window for live feature distribution
+
+# ── Retraining ────────────────────────────────────────────────────────────────
+retrain:
+  promote_f1_gain: 0.02          # auto-promote new model if F1 improves by > 2%
+  error_rate_threshold: 0.05     # alert if error rate exceeds 5%

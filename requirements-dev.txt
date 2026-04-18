@@ -44,6 +44,10 @@ xgboost==2.0.3
 joblib==1.4.0
 scipy==1.13.0
 
+# ── Computer Vision ───────────────────────────────────────────────────────
+opencv-python==4.9.0.80
+mediapipe==0.10.11
+
 # ── Notebook / EDA (optional) ─────────────────────────────────────────────
 # jupyter==1.0.0
 # matplotlib==3.8.4

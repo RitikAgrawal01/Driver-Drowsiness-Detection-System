@@ -1,0 +1,110 @@
+schema: '2.0'
+stages:
+  extract_frames:
+    cmd: python airflow/scripts/extract_frames.py --fps 2
+    deps:
+    - path: airflow/scripts/extract_frames.py
+      hash: md5
+      md5: b0f5bac5bfd777c4b766aa4560d93aee
+      size: 8622
+    - path: data/raw/
+      hash: md5
+      md5: da2eca8ed6d82cfc72e9793079c00b73.dir
+      size: 15585002944
+      nfiles: 24
+    params:
+      params.yaml:
+        frame_extraction.fps: 2
+        frame_extraction.output_dir: data/frames
+    outs:
+    - path: data/frames/
+      hash: md5
+      md5: c0d8913ad177c9d1fe80b68bdb75d90b.dir
+      size: 5514516050
+      nfiles: 28842
+    - path: reports/extraction_summary.json
+      hash: md5
+      md5: c21a866d38639b539e0b75157a560d43
+      size: 5200
+  extract_landmarks:
+    cmd: python airflow/scripts/extract_landmarks.py
+    deps:
+    - path: airflow/scripts/extract_landmarks.py
+      hash: md5
+      md5: 9d8b638efb5df455a6c5affee853611e
+      size: 10127
+    - path: data/frames/
+      hash: md5
+      md5: c0d8913ad177c9d1fe80b68bdb75d90b.dir
+      size: 5514516050
+      nfiles: 28842
+    params:
+      params.yaml:
+        mediapipe.min_detection_confidence: 0.5
+        mediapipe.min_tracking_confidence: 0.5
+    outs:
+    - path: data/landmarks/landmarks.csv
+      hash: md5
+      md5: 737341634ce430f35c166aaff8ed76d2
+      size: 776211816
+    - path: reports/landmark_summary.json
+      hash: md5
+      md5: df8371f203400d291045118d294743c5
+      size: 408
+  feature_engineering:
+    cmd: python airflow/scripts/feature_engineering.py --window-size 2
+    deps:
+    - path: airflow/scripts/feature_engineering.py
+      hash: md5
+      md5: 704369390986219aea65a56107844f15
+      size: 18795
+    - path: data/landmarks/landmarks.csv
+      hash: md5
+      md5: 737341634ce430f35c166aaff8ed76d2
+      size: 776211816
+    params:
+      params.yaml:
+        features.ear_threshold: 0.25
+        features.mar_threshold: 0.6
+        features.sliding_window_size: 2
+    outs:
+    - path: data/features/baseline.json
+      hash: md5
+      md5: 836690ae2662eb705d7a16ce8569eb8d
+      size: 9589
+    - path: data/features/features.csv
+      hash: md5
+      md5: 03299e088abf5a42e426da290c46b0f2
+      size: 3205906
+    - path: reports/feature_engineering_summary.json
+      hash: md5
+      md5: e5cb155ebdfb61d5fb36c0352b8dc8f3
+      size: 362
+  split_data:
+    cmd: python airflow/scripts/split_data.py
+    deps:
+    - path: airflow/scripts/split_data.py
+      hash: md5
+      md5: 2e2c2a1ef12bdedf2cb1b9e4ffe8aac7
+      size: 3455
+    - path: data/features/features.csv
+      hash: md5
+      md5: 03299e088abf5a42e426da290c46b0f2
+      size: 3205906
+    params:
+      params.yaml:
+        split.random_state: 42
+        split.test_size: 0.2
+    outs:
+    - path: data/processed/test.csv
+      hash: md5
+      md5: 3ceda9b7f281b436f09d57ad5b4bfbb6
+      size: 602063
+    - path: data/processed/train.csv
+      hash: md5
+      md5: 0b95a2c72a44b395703e1ec936e5234a
+      size: 2409046
+    - path: reports/split_summary.json
+      hash: md5
+      md5: cd72303634d931818c141f5c234bde2c
+      size: 237

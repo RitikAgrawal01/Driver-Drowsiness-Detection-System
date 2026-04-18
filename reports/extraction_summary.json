@@ -1,0 +1,201 @@
+{
+  "total_frames_extracted": 28842,
+  "total_videos_processed": 24,
+  "total_elapsed_sec": 1137.03,
+  "overall_throughput_fps": 25.4,
+  "per_video_stats": [
+    {
+      "video_path": "data/raw/drowsy/drowsy1.MOV",
+      "frames_extracted": 1201,
+      "duration_sec": 600.99,
+      "throughput_fps": 17.2,
+      "elapsed_sec": 69.64,
+      "status": "success"
+    },
+    {
+      "video_path": "data/raw/drowsy/drowsy10.MOV",
+      "frames_extracted": 1258,
+      "duration_sec": 628.35,
+      "throughput_fps": 33.6,
+      "elapsed_sec": 37.44,
+      "status": "success"
+    },
+    {
+      "video_path": "data/raw/drowsy/drowsy11.mp4",
+      "frames_extracted": 1184,
+      "duration_sec": 620.96,
+      "throughput_fps": 64.6,
+      "elapsed_sec": 18.32,
+      "status": "success"
+    },
+    {
+      "video_path": "data/raw/drowsy/drowsy12.mp4",
+      "frames_extracted": 1007,
+      "duration_sec": 500.35,
+      "throughput_fps": 41.5,
+      "elapsed_sec": 24.28,
+      "status": "success"
+    },
+    {
+      "video_path": "data/raw/drowsy/drowsy2.MOV",
+      "frames_extracted": 1209,
+      "duration_sec": 604.76,
+      "throughput_fps": 17.0,
+      "elapsed_sec": 70.98,
+      "status": "success"
+    },
+    {
+      "video_path": "data/raw/drowsy/drowsy3.mov",
+      "frames_extracted": 1232,
+      "duration_sec": 616.1,
+      "throughput_fps": 41.6,
+      "elapsed_sec": 29.62,
+      "status": "success"
+    },
+    {
+      "video_path": "data/raw/drowsy/drowsy4.mp4",
+      "frames_extracted": 1283,
+      "duration_sec": 615.76,
+      "throughput_fps": 112.9,
+      "elapsed_sec": 11.37,
+      "status": "success"
+    },
+    {
+      "video_path": "data/raw/drowsy/drowsy5.MOV",
+      "frames_extracted": 1204,
+      "duration_sec": 601.17,
+      "throughput_fps": 39.5,
+      "elapsed_sec": 30.47,
+      "status": "success"
+    },
+    {
+      "video_path": "data/raw/drowsy/drowsy6.mp4",
+      "frames_extracted": 853,
+      "duration_sec": 429.6,
+      "throughput_fps": 22.1,
+      "elapsed_sec": 38.58,
+      "status": "success"
+    },
+    {
+      "video_path": "data/raw/drowsy/drowsy7.mp4",
+      "frames_extracted": 1196,
+      "duration_sec": 602.19,
+      "throughput_fps": 18.5,
+      "elapsed_sec": 64.61,
+      "status": "success"
+    },
+    {
+      "video_path": "data/raw/drowsy/drowsy8.mp4",
+      "frames_extracted": 1211,
+      "duration_sec": 605.27,
+      "throughput_fps": 100.0,
+      "elapsed_sec": 12.11,
+      "status": "success"
+    },
+    {
+      "video_path": "data/raw/drowsy/drowsy9.mp4",
+      "frames_extracted": 1322,
+      "duration_sec": 665.21,
+      "throughput_fps": 10.0,
+      "elapsed_sec": 132.54,
+      "status": "success"
+    },
+    {
+      "video_path": "data/raw/alert/alert1.mov",
+      "frames_extracted": 1204,
+      "duration_sec": 602.39,
+      "throughput_fps": 17.8,
+      "elapsed_sec": 67.72,
+      "status": "success"
+    },
+    {
+      "video_path": "data/raw/alert/alert10.MOV",
+      "frames_extracted": 1088,
+      "duration_sec": 543.18,
+      "throughput_fps": 219.5,
+      "elapsed_sec": 4.96,
+      "status": "success"
+    },
+    {
+      "video_path": "data/raw/alert/alert11.mp4",
+      "frames_extracted": 1255,
+      "duration_sec": 628.53,
+      "throughput_fps": 39.1,
+      "elapsed_sec": 32.12,
+      "status": "success"
+    },
+    {
+      "video_path": "data/raw/alert/alert12.mp4",
+      "frames_extracted": 1128,
+      "duration_sec": 560.71,
+      "throughput_fps": 38.8,
+      "elapsed_sec": 29.05,
+      "status": "success"
+    },
+    {
+      "video_path": "data/raw/alert/alert2.mov",
+      "frames_extracted": 1218,
+      "duration_sec": 609.4,
+      "throughput_fps": 17.0,
+      "elapsed_sec": 71.61,
+      "status": "success"
+    },
+    {
+      "video_path": "data/raw/alert/alert3.MOV",
+      "frames_extracted": 1385,
+      "duration_sec": 692.82,
+      "throughput_fps": 17.9,
+      "elapsed_sec": 77.23,
+      "status": "success"
+    },
+    {
+      "video_path": "data/raw/alert/alert4.mp4",
+      "frames_extracted": 1281,
+      "duration_sec": 614.56,
+      "throughput_fps": 113.0,
+      "elapsed_sec": 11.33,
+      "status": "success"
+    },
+    {
+      "video_path": "data/raw/alert/alert5.MOV",
+      "frames_extracted": 1228,
+      "duration_sec": 613.16,
+      "throughput_fps": 38.5,
+      "elapsed_sec": 31.86,
+      "status": "success"
+    },
+    {
+      "video_path": "data/raw/alert/alert6.mp4",
+      "frames_extracted": 1270,
+      "duration_sec": 610.12,
+      "throughput_fps": 22.3,
+      "elapsed_sec": 56.95,
+      "status": "success"
+    },
+    {
+      "video_path": "data/raw/alert/alert7.mp4",
+      "frames_extracted": 1202,
+      "duration_sec": 600.71,
+      "throughput_fps": 16.9,
+      "elapsed_sec": 71.33,
+      "status": "success"
+    },
+    {
+      "video_path": "data/raw/alert/alert8.mp4",
+      "frames_extracted": 1211,
+      "duration_sec": 605.27,
+      "throughput_fps": 96.9,
+      "elapsed_sec": 12.49,
+      "status": "success"
+    },
+    {
+      "video_path": "data/raw/alert/alert9.mp4",
+      "frames_extracted": 1212,
+      "duration_sec": 610.03,
+      "throughput_fps": 9.4,
+      "elapsed_sec": 129.37,
+      "status": "success"
+    }
+  ],
+  "errors": []
+}

@@ -1,96 +1,142 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# dvc.yaml — DDD Data & Model Pipeline
+# ─────────────────────────────────────────────────────────────────────────────
+# Run the full pipeline:   dvc repro
+# Visualise the DAG:       dvc dag
+# Check what changed:      dvc status
+# Push artifacts:          dvc push
+# Pull artifacts:          dvc pull
+#
+# Every stage specifies:
+#   cmd   — shell command to execute
+#   deps  — inputs (code + data); change triggers re-run
+#   params — params.yaml keys that affect this stage
+#   outs  — outputs tracked by DVC (cached, not stored in Git)
+#   metrics — JSON metrics tracked by DVC (stored in Git, small)
+#   plots — plot files (confusion matrices, etc.)
+# ─────────────────────────────────────────────────────────────────────────────
+
 stages:
 
-  # Stage 1: Extract frames from raw video files
+  # ── Stage 1: Extract frames from raw videos ──────────────────────────────
   extract_frames:
-    cmd: python airflow/scripts/extract_frames.py
+    cmd: python airflow/scripts/extract_frames.py --fps ${frame_extraction.fps}
+    desc: 'OpenCV: extract JPEG frames from raw .avi/.mp4 videos at TARGET_FPS'
     deps:
-      - data/raw/
-      - airflow/scripts/extract_frames.py
+    - airflow/scripts/extract_frames.py
+    - data/raw/
     params:
-      - params.yaml:
-          - frame_extraction.fps
-          - frame_extraction.output_dir
+    - params.yaml:
+      - frame_extraction.fps
+      - frame_extraction.output_dir
     outs:
-      - data/frames/
+    - data/frames/:
+        cache: true
+        persist: false
+    metrics:
+    - reports/extraction_summary.json:
+        cache: false
 
-  # Stage 2: Run MediaPipe on extracted frames → landmark CSVs
+  # ── Stage 2: MediaPipe landmark extraction ───────────────────────────────
   extract_landmarks:
     cmd: python airflow/scripts/extract_landmarks.py
+    desc: 'MediaPipe FaceMesh: extract 468 3D facial landmarks per frame'
     deps:
-      - data/frames/
-      - airflow/scripts/extract_landmarks.py
+    - airflow/scripts/extract_landmarks.py
+    - data/frames/
     params:
-      - params.yaml:
-          - mediapipe.min_detection_confidence
-          - mediapipe.min_tracking_confidence
+    - params.yaml:
+      - mediapipe.min_detection_confidence
+      - mediapipe.min_tracking_confidence
     outs:
-      - data/landmarks/
+    - data/landmarks/landmarks.csv:
+        cache: true
+    metrics:
+    - reports/landmark_summary.json:
+        cache: false
 
-  # Stage 3: PySpark feature engineering → EAR, PERCLOS, MAR, Head Pose
+  # ── Stage 3: PySpark feature engineering ─────────────────────────────────
   feature_engineering:
-    cmd: python airflow/scripts/feature_engineering.py
+    cmd: python airflow/scripts/feature_engineering.py --window-size ${features.sliding_window_size}
+    desc: 'PySpark sliding-window: EAR, PERCLOS, MAR, head pose aggregation'
     deps:
-      - data/landmarks/
-      - airflow/scripts/feature_engineering.py
+    - airflow/scripts/feature_engineering.py
+    - data/landmarks/landmarks.csv
     params:
-      - params.yaml:
-          - features.sliding_window_size
-          - features.ear_threshold
-          - features.mar_threshold
+    - params.yaml:
+      - features.sliding_window_size
+      - features.ear_threshold
+      - features.mar_threshold
     outs:
-      - data/features/features.csv
-      - data/features/baseline.json
+    - data/features/features.csv:
+        cache: true
+    - data/features/baseline.json:
+        cache: true
+    metrics:
+    - reports/feature_engineering_summary.json:
+        cache: false
 
-  # Stage 4: Split data into train/test sets
+  # ── Stage 4: Train/test split ────────────────────────────────────────────
   split_data:
     cmd: python airflow/scripts/split_data.py
+    desc: Stratified 80/20 train/test split on label column
     deps:
-      - data/features/features.csv
-      - airflow/scripts/split_data.py
+    - airflow/scripts/split_data.py
+    - data/features/features.csv
     params:
-      - params.yaml:
-          - split.test_size
-          - split.random_state
+    - params.yaml:
+      - split.test_size
+      - split.random_state
     outs:
-      - data/processed/train.csv
-      - data/processed/test.csv
+    - data/processed/train.csv:
+        cache: true
+    - data/processed/test.csv:
+        cache: true
+    metrics:
+    - reports/split_summary.json:
+        cache: false
 
-  # Stage 5: Train XGBoost model
+  # ── Stage 5: Train XGBoost model ─────────────────────────────────────────
   train_xgboost:
     cmd: python model_server/train_xgboost.py
+    desc: Train XGBoost classifier with MLflow experiment tracking
     deps:
-      - data/processed/train.csv
-      - model_server/train_xgboost.py
+    - model_server/train_xgboost.py
+    - data/processed/train.csv
     params:
-      - params.yaml:
-          - xgboost.n_estimators
-          - xgboost.max_depth
-          - xgboost.learning_rate
-          - xgboost.subsample
+    - params.yaml:
+      - xgboost.n_estimators
+      - xgboost.max_depth
+      - xgboost.learning_rate
+      - xgboost.subsample
+      - xgboost.colsample_bytree
     outs:
-      - models/xgboost_model.pkl
+    - models/xgboost_model.pkl:
+        cache: true
     metrics:
-      - reports/xgboost_metrics.json:
-          cache: false
+    - reports/xgboost_metrics.json:
+        cache: false
 
-  # Stage 6: Train SVM model
+  # ── Stage 6: Train SVM model ─────────────────────────────────────────────
   train_svm:
     cmd: python model_server/train_svm.py
+    desc: Train SVM classifier (RBF kernel) with MLflow experiment tracking
     deps:
-      - data/processed/train.csv
-      - model_server/train_svm.py
+    - model_server/train_svm.py
+    - data/processed/train.csv
     params:
-      - params.yaml:
-          - svm.kernel
-          - svm.C
-          - svm.gamma
+    - params.yaml:
+      - svm.kernel
+      - svm.C
+      - svm.gamma
     outs:
-      - models/svm_model.pkl
+    - models/svm_model.pkl:
+        cache: true
     metrics:
-      - reports/svm_metrics.json:
-          cache: false
+    - reports/svm_metrics.json:
+        cache: false
 
-  # Stage 7: Evaluate and compare models
+  # ── Stage 7: Evaluate and compare models ─────────────────────────────────
   evaluate:
     cmd: python model_server/evaluate.py
     deps:
