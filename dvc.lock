@@ -108,3 +108,95 @@ stages:
       hash: md5
       md5: cd72303634d931818c141f5c234bde2c
       size: 237
+  train_xgboost:
+    cmd: python model_server/train_xgboost.py
+    deps:
+    - path: data/processed/train.csv
+      hash: md5
+      md5: 0b95a2c72a44b395703e1ec936e5234a
+      size: 2409046
+    - path: model_server/train_xgboost.py
+      hash: md5
+      md5: 5a483a23ce6d8908732b08cfb9306d42
+      size: 17802
+    params:
+      params.yaml:
+        xgboost.colsample_bytree: 0.8
+        xgboost.learning_rate: 0.1
+        xgboost.max_depth: 6
+        xgboost.n_estimators: 200
+        xgboost.subsample: 0.8
+    outs:
+    - path: models/xgboost_model.pkl
+      hash: md5
+      md5: b89f845ff2be1e69e091ed8e01b1c53a
+      size: 679022
+    - path: reports/confusion_matrix_xgb.png
+      hash: md5
+      md5: 92da53fad6c72d67488ccf7f472c6890
+      size: 40449
+    - path: reports/feature_importance_xgb.png
+      hash: md5
+      md5: a3700939e087f55c4a897a999696b83f
+      size: 55892
+    - path: reports/xgboost_metrics.json
+      hash: md5
+      md5: 033cde9b2fc09df225897f73465c2a23
+      size: 437
+  train_svm:
+    cmd: python model_server/train_svm.py
+    deps:
+    - path: data/processed/train.csv
+      hash: md5
+      md5: 0b95a2c72a44b395703e1ec936e5234a
+      size: 2409046
+    - path: model_server/train_svm.py
+      hash: md5
+      md5: 2184457ffbc44faaf127a651079363ae
+      size: 13143
+    params:
+      params.yaml:
+        svm.C: 1.0
+        svm.gamma: scale
+        svm.kernel: rbf
+    outs:
+    - path: models/svm_model.pkl
+      hash: md5
+      md5: dab1009b790801e7d592be34f78f5bf9
+      size: 1077165
+    - path: reports/confusion_matrix_svm.png
+      hash: md5
+      md5: c58d941f29648816a4e89e67207a6f95
+      size: 39289
+    - path: reports/svm_metrics.json
+      hash: md5
+      md5: 2e8e5df34561cdf9b91ee00619cd5044
+      size: 430
+  evaluate:
+    cmd: python model_server/evaluate.py
+    deps:
+    - path: data/processed/test.csv
+      hash: md5
+      md5: 3ceda9b7f281b436f09d57ad5b4bfbb6
+      size: 602063
+    - path: model_server/evaluate.py
+      hash: md5
+      md5: bdff0821dacff2c53a04bb5434ec9cf7
+      size: 15887
+    - path: models/svm_model.pkl
+      hash: md5
+      md5: dab1009b790801e7d592be34f78f5bf9
+      size: 1077165
+    - path: models/xgboost_model.pkl
+      hash: md5
+      md5: b89f845ff2be1e69e091ed8e01b1c53a
+      size: 679022
+    outs:
+    - path: reports/evaluation_report.json
+      hash: md5
+      md5: ea4e0e228a347e2e027c12cee29b066e
+      size: 1819
+    - path: reports/roc_curve.png
+      hash: md5
+      md5: 9b7f5623600903a05f4f014cb7220a8a
+      size: 82411
