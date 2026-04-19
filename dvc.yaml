@@ -96,7 +96,7 @@ stages:
     - reports/split_summary.json:
         cache: false
 
-  # ── Stage 5: Train XGBoost model ─────────────────────────────────────────
+# ── Stage 5: Train XGBoost model ─────────────────────────────────────────
   train_xgboost:
     cmd: python model_server/train_xgboost.py
     desc: Train XGBoost classifier with MLflow experiment tracking
@@ -112,6 +112,10 @@ stages:
       - xgboost.colsample_bytree
     outs:
     - models/xgboost_model.pkl:
+        cache: true
+    - reports/confusion_matrix_xgb.png:  # MOVED HERE
+        cache: true
+    - reports/feature_importance_xgb.png: # MOVED HERE
         cache: true
     metrics:
     - reports/xgboost_metrics.json:
@@ -132,6 +136,8 @@ stages:
     outs:
     - models/svm_model.pkl:
         cache: true
+    - reports/confusion_matrix_svm.png: # MOVED HERE
+        cache: true
     metrics:
     - reports/svm_metrics.json:
         cache: false
@@ -145,6 +151,7 @@ stages:
       - models/svm_model.pkl
       - model_server/evaluate.py
     outs:
-      - reports/evaluation_report.json
-      - reports/confusion_matrix_xgb.png
-      - reports/confusion_matrix_svm.png
+      - reports/evaluation_report.json:
+          cache: false
+      - reports/roc_curve.png:
+          cache: true

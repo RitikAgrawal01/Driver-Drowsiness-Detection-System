@@ -1,0 +1,18 @@
+{
+  "model": "xgboost",
+  "mlflow_run_id": "fc7ee96fca8340fb89063e83f388dc0c",
+  "git_commit": "ddf0e68",
+  "f1_weighted": 0.8843,
+  "f1_drowsy_class": 0.8852,
+  "accuracy": 0.8843,
+  "precision_weighted": 0.8843,
+  "recall_weighted": 0.8843,
+  "auc_roc": 0.9677,
+  "latency_p50_ms": 0.285,
+  "latency_p95_ms": 1.955,
+  "latency_p99_ms": 4.398,
+  "latency_mean_ms": 0.588,
+  "meets_latency_sla": 1,
+  "n_train": 22226,
+  "n_test": 5557
+}

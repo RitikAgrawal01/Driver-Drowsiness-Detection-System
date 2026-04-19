@@ -1,115 +1,143 @@
 """
 backend/main.py
 ────────────────
-FastAPI main application entry point for the DDD backend.
-Full router implementation done in Phase 5.
-Health and ready endpoints are fully implemented here.
+FastAPI main application entry point.
+Registers all routers, middleware, lifespan events.
 """
 
-import logging
-import os
+import asyncio
+from contextlib import asynccontextmanager
 
-import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+from fastapi.responses import Response
 
-from schemas import HealthResponse, ReadyResponse
+from backend.config import get_settings
+from backend.logger import setup_logging, get_logger
+from backend.metrics import MODEL_SERVER_REACHABLE
+from backend.routers import session, predict, stream
+from backend.services import model_client
+from backend.services.session_manager import get_session_manager
 
-# ── Logging ───────────────────────────────────────────────────────────────────
-logging.basicConfig(
-    level=os.getenv("LOG_LEVEL", "INFO"),
-    format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
-)
-logger = logging.getLogger("backend")
+settings = get_settings()
+setup_logging(settings.log_level, settings.environment)
+logger = get_logger("main")
+
+
+# ── Lifespan ──────────────────────────────────────────────────────────────────
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup and shutdown logic."""
+    logger.info(
+        f"Starting {settings.project_name} backend",
+        version=settings.version,
+        environment=settings.environment,
+    )
+
+    # Initialise session manager
+    get_session_manager()
+
+    # Probe model server health
+    reachable = await model_client.health_check()
+    if reachable:
+        logger.info("Model server reachable ✓")
+        MODEL_SERVER_REACHABLE.set(1)
+    else:
+        logger.warning(
+            "Model server NOT reachable at startup — "
+            "will retry on each request"
+        )
+
+    # Background task: periodic model server health probe every 30s
+    async def probe_model_server():
+        while True:
+            await asyncio.sleep(30)
+            await model_client.health_check()
+
+    probe_task = asyncio.create_task(probe_model_server())
+
+    yield  # ← application runs here
+
+    # Shutdown
+    logger.info("Backend shutting down...")
+    probe_task.cancel()
+    get_session_manager().cleanup_all()
+    await model_client.close_client()
+    logger.info("Shutdown complete")
+
 
 # ── App ───────────────────────────────────────────────────────────────────────
 app = FastAPI(
     title="Driver Drowsiness Detection — Backend API",
     description=(
-        "Main API for drowsiness detection. "
-        "Receives webcam frames via WebSocket, computes MediaPipe features, "
-        "calls model server for inference, and streams predictions back."
+        "Main backend API. Receives webcam frames via WebSocket, "
+        "extracts drowsiness features with MediaPipe, calls the model server, "
+        "and manages monitoring sessions."
     ),
-    version="1.0.0",
+    version=settings.version,
+    lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
 )
 
-# ── CORS (allow React dev server and production frontend) ─────────────────────
+# ── Middleware ────────────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://frontend:80",
-        os.getenv("FRONTEND_URL", "http://localhost:3000"),
-    ],
+    allow_origins=settings.cors_origins + ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-MODEL_SERVER_URL = os.getenv("MODEL_SERVER_URL", "http://model_server:8001")
+
+# ── Routers ───────────────────────────────────────────────────────────────────
+app.include_router(session.router)
+app.include_router(predict.router)
+app.include_router(stream.router)
 
 
-# ── Health & Ready Endpoints ──────────────────────────────────────────────────
-
-@app.get(
-    "/health",
-    response_model=HealthResponse,
-    tags=["Infrastructure"],
-    summary="Service health check",
-)
+# ── Health endpoints ──────────────────────────────────────────────────────────
+@app.get("/health", tags=["Health"])
 async def health():
-    """
-    Health check endpoint.
-    Used by Docker Compose healthcheck and load balancers.
-    Always returns 200 OK if the process is running.
-    """
-    return HealthResponse(status="ok", service="backend", version="1.0.0")
+    """Docker healthcheck — always returns 200."""
+    return {
+        "status": "ok",
+        "service": "backend",
+        "version": settings.version,
+    }
 
 
-@app.get(
-    "/ready",
-    response_model=ReadyResponse,
-    tags=["Infrastructure"],
-    summary="Service readiness check",
-)
+@app.get("/ready", tags=["Health"])
 async def ready():
-    """
-    Readiness check.
-    Returns ok only when the model server /health endpoint is reachable.
-    Frontend uses this to show "connecting..." state on startup.
-    """
-    try:
-        async with httpx.AsyncClient(timeout=3.0) as client:
-            resp = await client.get(f"{MODEL_SERVER_URL}/health")
-            reachable = resp.status_code == 200
-    except Exception as e:
-        logger.warning(f"Model server not reachable: {e}")
-        reachable = False
-
-    if reachable:
-        return ReadyResponse(
-            status="ready",
-            model_server_reachable=True,
-            model_server_url=MODEL_SERVER_URL,
-        )
-    else:
-        from fastapi import Response
-        from fastapi.responses import JSONResponse
-        return JSONResponse(
+    """Readiness — ok only when model server is reachable."""
+    reachable = await model_client.health_check()
+    if not reachable:
+        from fastapi import HTTPException
+        raise HTTPException(
             status_code=503,
-            content=ReadyResponse(
-                status="not_ready",
-                model_server_reachable=False,
-                model_server_url=MODEL_SERVER_URL,
-                detail="Model server health check failed",
-            ).model_dump(),
+            detail="Model server unavailable",
         )
+    return {
+        "status": "ready",
+        "model_server_reachable": True,
+        "model_server_url": settings.model_server_url,
+    }
 
 
-# ── Placeholder routers (implemented Phase 5) ─────────────────────────────────
-# from routers import predict, session, stream
-# app.include_router(predict.router, prefix="/predict", tags=["Inference"])
-# app.include_router(session.router, prefix="/session", tags=["Session"])
-# app.include_router(stream.router, tags=["WebSocket"])
+@app.get("/status", tags=["Health"])
+async def status():
+    """Overall system status including active sessions."""
+    manager = get_session_manager()
+    return {
+        "status": "ok",
+        "version": settings.version,
+        "active_sessions": manager.active_count(),
+        "environment": settings.environment,
+    }
+
+
+@app.get("/metrics", tags=["Monitoring"])
+async def metrics():
+    """Prometheus metrics scraping endpoint."""
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)

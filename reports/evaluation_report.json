@@ -1,0 +1,71 @@
+{
+  "evaluation_summary": {
+    "winner": "XGBoost",
+    "winner_run_id": "fc7ee96fca8340fb89063e83f388dc0c",
+    "promoted_mlflow_version": "2",
+    "acceptance_criteria": {
+      "min_f1_weighted": 0.85,
+      "min_auc_roc": 0.9,
+      "max_latency_p95_ms": 200
+    }
+  },
+  "xgboost": {
+    "model": "XGBoost",
+    "f1_weighted": 0.8843,
+    "f1_drowsy_class": 0.8852,
+    "accuracy": 0.8843,
+    "precision_weighted": 0.8843,
+    "recall_weighted": 0.8843,
+    "auc_roc": 0.9677,
+    "latency_p50_ms": 1.087,
+    "latency_p95_ms": 2.682,
+    "latency_mean_ms": 1.371,
+    "meets_acceptance_criteria": true,
+    "acceptance_detail": {
+      "meets_f1": true,
+      "meets_auc": true,
+      "meets_latency": true
+    }
+  },
+  "svm": {
+    "model": "SVM",
+    "f1_weighted": 0.811,
+    "f1_drowsy_class": 0.8179,
+    "accuracy": 0.8112,
+    "precision_weighted": 0.8125,
+    "recall_weighted": 0.8112,
+    "auc_roc": 0.888,
+    "latency_p50_ms": 0.515,
+    "latency_p95_ms": 1.375,
+    "latency_mean_ms": 0.667,
+    "meets_acceptance_criteria": false,
+    "acceptance_detail": {
+      "meets_f1": false,
+      "meets_auc": false,
+      "meets_latency": true
+    }
+  },
+  "winner_metrics": {
+    "model": "XGBoost",
+    "f1_weighted": 0.8843,
+    "f1_drowsy_class": 0.8852,
+    "accuracy": 0.8843,
+    "precision_weighted": 0.8843,
+    "recall_weighted": 0.8843,
+    "auc_roc": 0.9677,
+    "latency_p50_ms": 1.087,
+    "latency_p95_ms": 2.682,
+    "latency_mean_ms": 1.371,
+    "meets_acceptance_criteria": true,
+    "acceptance_detail": {
+      "meets_f1": true,
+      "meets_auc": true,
+      "meets_latency": true
+    }
+  },
+  "artifacts": {
+    "roc_curve": "reports/roc_curve.png",
+    "xgb_confusion_matrix": "reports/confusion_matrix_xgb.png",
+    "svm_confusion_matrix": "reports/confusion_matrix_svm.png"
+  }
+}
