@@ -168,7 +168,9 @@ jobs:
           cache: pip
 
       - name: Install DVC
-        run: pip install dvc==3.49.0
+        run: |
+          pip install pathspec==0.11.2
+          pip install dvc==3.49.0
 
       - name: Initialise DVC (no SCM mode for CI)
         run: |

@@ -1,21 +1,10 @@
-# ─────────────────────────────────────────────────────────────────
-# .gitattributes — Git LFS tracking rules
-# Run `git lfs install` once after cloning before adding any files.
-# ─────────────────────────────────────────────────────────────────
-
-[filter "lfs"]
-    clean = git-lfs clean -- %f
-    smudge = git-lfs smudge -- %f
-    process = git-lfs filter-process
-    required = true
-
-# ── Video files (raw dataset) ─────────────────────────────────────
+# ── Video files ──────────────────────────────────────────────────
 *.avi filter=lfs diff=lfs merge=lfs -text
 *.mp4 filter=lfs diff=lfs merge=lfs -text
 *.mov filter=lfs diff=lfs merge=lfs -text
 *.mkv filter=lfs diff=lfs merge=lfs -text
 
-# ── Model artifacts ───────────────────────────────────────────────
+# ── Model artifacts ──────────────────────────────────────────────
 *.pkl filter=lfs diff=lfs merge=lfs -text
 *.joblib filter=lfs diff=lfs merge=lfs -text
 *.h5 filter=lfs diff=lfs merge=lfs -text
@@ -23,19 +12,16 @@
 *.pth filter=lfs diff=lfs merge=lfs -text
 *.onnx filter=lfs diff=lfs merge=lfs -text
 
-# ── Large data files ──────────────────────────────────────────────
+# ── Large data files ─────────────────────────────────────────────
 *.csv filter=lfs diff=lfs merge=lfs -text
 *.parquet filter=lfs diff=lfs merge=lfs -text
 *.feather filter=lfs diff=lfs merge=lfs -text
 
-# ── Images (extracted frames) ─────────────────────────────────────
+# ── Images ───────────────────────────────────────────────────────
 *.jpg filter=lfs diff=lfs merge=lfs -text
 *.jpeg filter=lfs diff=lfs merge=lfs -text
 *.png filter=lfs diff=lfs merge=lfs -text
 
-# ── Archives ──────────────────────────────────────────────────────
+# ── Archives ─────────────────────────────────────────────────────
 *.zip filter=lfs diff=lfs merge=lfs -text
 *.tar.gz filter=lfs diff=lfs merge=lfs -text
-
-# ── NOTE: DVC-tracked files (.dvc pointers) stay in Git as text ───
-# ── DVC handles the actual binary content versioning             ───
