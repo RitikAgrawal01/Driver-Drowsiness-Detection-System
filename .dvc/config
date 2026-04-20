@@ -2,5 +2,7 @@
     autostage = true
     analytics = false
     remote = localremote
+[cache]
+    type = "symlink,copy"
 ['remote "localremote"']
     url = /home/ritik/dvc_remote_ddd

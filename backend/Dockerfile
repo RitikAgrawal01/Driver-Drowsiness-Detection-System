@@ -7,17 +7,22 @@ WORKDIR /app
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
     libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender-dev \
     libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 RUN pip install --upgrade pip && \
-    pip install --no-cache-dir --prefix=/install -r requirements.txt
+    pip install --no-cache-dir --prefix=/install \
+    --default-timeout=1000 \
+    --prefer-binary \
+    -i https://pypi.tuna.tsinghua.edu.cn/simple \
+    mediapipe==0.10.11 --no-deps && \
+    pip install --no-cache-dir --prefix=/install \
+    --default-timeout=1000 \
+    --prefer-binary \
+    -i https://pypi.tuna.tsinghua.edu.cn/simple \
+    -r requirements.txt
 
 # ─────────────────────────────────────────────
 # Stage 2: Runtime
@@ -29,9 +34,6 @@ WORKDIR /app
 # Runtime system dependencies for OpenCV and MediaPipe
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender-dev \
     libgl1 \
     curl \
     && rm -rf /var/lib/apt/lists/*
@@ -46,7 +48,9 @@ RUN useradd -m -u 1000 appuser && \
 
 COPY --chown=appuser:appuser . .
 
-USER appuser
+# USER appuser
+
+COPY --chown=appuser:appuser . /app/backend
 
 EXPOSE 8000
 

@@ -14,21 +14,21 @@
 # ── Version Control & Pipeline ────────────────────────────────────────────
 dvc==3.49.0
 
-# ── Experiment Tracking (CLI access to MLflow UI) ─────────────────────────
+# ── Experiment Tracking ───────────────────────────────────────────────────
 mlflow==2.11.1
 
 # ── Testing ───────────────────────────────────────────────────────────────
 pytest==8.1.1
 pytest-cov==5.0.0
 pytest-asyncio==0.23.6
-httpx==0.27.0               # for FastAPI TestClient
+httpx==0.27.0
 
 # ── Code Quality ──────────────────────────────────────────────────────────
 black==24.4.2
 flake8==7.0.0
 isort==5.13.2
 
-# ── FastAPI (for running backend locally without Docker) ──────────────────
+# ── FastAPI (local dev) ───────────────────────────────────────────────────
 fastapi==0.110.0
 uvicorn[standard]==0.29.0
 pydantic==2.7.0
@@ -36,7 +36,7 @@ pydantic-settings==2.2.1
 python-dotenv==1.0.1
 python-multipart==0.0.9
 
-# ── ML (for running training scripts locally) ─────────────────────────────
+# ── ML ────────────────────────────────────────────────────────────────────
 numpy==1.26.4
 pandas==2.2.2
 scikit-learn==1.4.2
@@ -48,7 +48,6 @@ scipy==1.13.0
 opencv-python==4.9.0.80
 mediapipe==0.10.11
 
-# ── Notebook / EDA (optional) ─────────────────────────────────────────────
-# jupyter==1.0.0
-# matplotlib==3.8.4
-# seaborn==0.13.2
+# ── Monitoring & Logging ──────────────────────────────────────────────────
+prometheus-client==0.20.0
+structlog==24.1.0

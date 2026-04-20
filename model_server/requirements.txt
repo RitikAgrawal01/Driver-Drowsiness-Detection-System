@@ -9,6 +9,10 @@ numpy==1.26.4
 pandas==2.2.2
 joblib==1.4.0
 
+# ── Backend / DB ──────────────────────────────
+greenlet==3.0.3
+SQLAlchemy==2.0.29
+
 # ── MLflow ────────────────────────────────────
 mlflow==2.11.1
 
@@ -18,3 +22,4 @@ prometheus-client==0.20.0
 # ── Config & Utilities ────────────────────────
 python-dotenv==1.0.1
 pydantic==2.7.0
+pydantic-settings==2.2.1

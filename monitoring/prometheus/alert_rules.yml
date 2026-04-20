@@ -1,43 +1,108 @@
 groups:
   - name: ddd_alerts
+    interval: 15s
     rules:
 
-      # Alert if error rate exceeds 5% (from guideline)
+      # ── Error rate > 5% (from guideline) ───────────────────────────────────
       - alert: HighErrorRate
-        expr: rate(ddd_request_errors_total[5m]) / rate(ddd_requests_total[5m]) > 0.05
+        expr: |
+          (
+            rate(ddd_request_errors_total[5m])
+            /
+            (rate(ddd_requests_total[5m]) + 0.001)
+          ) > 0.05
         for: 2m
         labels:
           severity: warning
+          service: backend
         annotations:
-          summary: "High error rate detected"
-          description: "Error rate is {{ $value | humanizePercentage }} over the last 5 minutes."
+          summary: "High error rate on backend"
+          description: >
+            Error rate is {{ $value | humanizePercentage }} over last 5m.
+            Threshold: 5%. Check backend logs at logs/backend/backend.log.
 
-      # Alert if inference latency exceeds 200ms SLA (from guideline)
+      # ── P95 latency > 200ms SLA (from guideline) ──────────────────────────
       - alert: HighInferenceLatency
-        expr: histogram_quantile(0.95, rate(ddd_inference_latency_seconds_bucket[5m])) > 0.2
+        expr: |
+          histogram_quantile(
+            0.95,
+            rate(ddd_inference_latency_seconds_bucket[5m])
+          ) > 0.2
         for: 2m
         labels:
           severity: warning
+          service: backend
         annotations:
           summary: "Inference latency SLA breach"
-          description: "P95 inference latency is {{ $value }}s (SLA: 200ms)."
+          description: >
+            P95 latency is {{ $value | humanizeDuration }} (SLA: 200ms).
+            Check model server load and network between backend and model_server.
 
-      # Alert if data drift score exceeds threshold
+      # ── Data drift detected (from guideline) ──────────────────────────────
       - alert: DataDriftDetected
-        expr: ddd_feature_drift_score > 0.15
+        expr: ddd_overall_drift_score > 0.15
         for: 5m
         labels:
           severity: critical
+          service: backend
         annotations:
-          summary: "Data drift detected — retraining may be needed"
-          description: "Feature drift score is {{ $value }} (threshold: 0.15)."
+          summary: "Data drift detected — retraining recommended"
+          description: >
+            Overall feature drift score is {{ $value | humanize }}
+            (threshold: 0.15). Input feature distributions have shifted
+            significantly from training baseline. Consider triggering
+            dag_retrain in Airflow.
 
-      # Alert if model server is down
+      # ── Model server down ──────────────────────────────────────────────────
       - alert: ModelServerDown
         expr: up{job="ddd_model_server"} == 0
         for: 1m
         labels:
           severity: critical
+          service: model_server
         annotations:
-          summary: "Model server is down"
-          description: "The model server has been unreachable for more than 1 minute."
+          summary: "Model server is unreachable"
+          description: >
+            The model server has been unreachable for > 1 minute.
+            All inference requests will fail. Check container health:
+            docker-compose ps model_server
+
+      # ── Backend down ───────────────────────────────────────────────────────
+      - alert: BackendDown
+        expr: up{job="ddd_backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: backend
+        annotations:
+          summary: "Backend API is unreachable"
+          description: >
+            The backend has been down for > 1 minute.
+            Frontend cannot connect. Check: docker-compose ps backend
+
+      # ── Per-feature drift (individual feature alerts) ──────────────────────
+      - alert: EARFeatureDrift
+        expr: ddd_feature_drift_score{feature="ear_mean"} > 0.20
+        for: 5m
+        labels:
+          severity: warning
+          feature: ear_mean
+        annotations:
+          summary: "EAR feature drift detected"
+          description: >
+            ear_mean drift score is {{ $value | humanize }} (threshold: 0.20).
+            Eye Aspect Ratio distribution has shifted — possible lighting
+            change or camera angle shift.
+
+      - alert: PERCLOSFeatureDrift
+        expr: ddd_feature_drift_score{feature="perclos"} > 0.20
+        for: 5m
+        labels:
+          severity: warning
+          feature: perclos
+        annotations:
+          summary: "PERCLOS feature drift detected"
+          description: >
+            perclos drift score is {{ $value | humanize }} (threshold: 0.20).
+            Eye closure rate distribution shifted — possible occlusion
+            or different subject geometry.
