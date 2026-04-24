@@ -30,14 +30,13 @@ from backend.config import get_settings
 from backend.logger import get_logger
 from backend.metrics import (
     ACTIVE_SESSIONS, DROWSY_ALERTS_TOTAL,
-    FRAMES_PROCESSED_TOTAL, INFERENCE_LATENCY, PREDICTION_CONFIDENCE,
+    FRAMES_PROCESSED_TOTAL, INFERENCE_LATENCY, PREDICTION_CONFIDENCE, REQUESTS_TOTAL,
 )
 from backend.services import model_client
 from backend.services.session_manager import get_session_manager
 
 logger = get_logger("router.stream")
 router = APIRouter(tags=["Streaming"])
-
 
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -51,6 +50,7 @@ async def websocket_endpoint(websocket: WebSocket):
       4. Push 'alert' messages when drowsy detected
       5. On 'close' message or disconnect: send session summary
     """
+    
     await websocket.accept()
     settings = get_settings()
     manager = get_session_manager()
@@ -91,6 +91,9 @@ async def websocket_endpoint(websocket: WebSocket):
                 logger.info(
                     f"WebSocket init: session={session_id} window={window_size}"
                 )
+                
+                REQUESTS_TOTAL.labels(endpoint="ws_stream", status="success").inc()
+                
                 await websocket.send_json({
                     "type": "init_ack",
                     "session_id": session_id,
@@ -101,99 +104,77 @@ async def websocket_endpoint(websocket: WebSocket):
             # ── FRAME ─────────────────────────────────────────────────────────
             elif msg_type == "frame":
                 if session is None:
-                    await websocket.send_json({
-                        "type": "error",
-                        "message": "Send 'init' message first",
-                    })
+                    await websocket.send_json({"type": "error", "message": "Send 'init' message first"})
                     continue
 
                 frame_id = msg.get("frame_id", 0)
                 image_b64 = msg.get("image_b64", "")
-
                 session.frames_processed += 1
                 FRAMES_PROCESSED_TOTAL.inc()
 
                 t_start = time.perf_counter()
-
-                # ── Feature extraction ────────────────────────────────────────
                 feature_vector = session.extractor.process_frame(image_b64)
 
                 if feature_vector is None:
-                    # Window not full yet or no face detected
-                    await websocket.send_json({
-                        "type": "buffering",
-                        "frame_id": frame_id,
-                        "message": "Building feature window...",
-                    })
+                    await websocket.send_json({"type": "buffering", "frame_id": frame_id, "message": "Building feature window..."})
                     continue
 
-                # ── Model inference ───────────────────────────────────────────
                 try:
                     result = await model_client.predict(feature_vector)
                 except Exception as e:
                     logger.error(f"Model server error on frame {frame_id}: {e}")
-                    await websocket.send_json({
-                        "type": "error",
-                        "frame_id": frame_id,
-                        "message": "Model server temporarily unavailable",
-                    })
                     continue
 
                 latency_ms = (time.perf_counter() - t_start) * 1000
-                state = result.get("state", "alert")
+                raw_state = result.get("state", "alert")
                 confidence = result.get("confidence", 0.0)
 
-                # Update session state
-                session.current_state = state
-                session.current_confidence = confidence
+                # --- 🧠 SYNCED STATE MACHINE LOGIC ---
+                is_frame_drowsy = (raw_state == "drowsy" and confidence >= settings.confidence_threshold)
 
-                ear = feature_vector.get("ear_mean")
-                if ear is not None:
-                    session.ear_history.append(ear)
-                session.confidence_history.append(confidence)
+                if is_frame_drowsy:
+                    session.drowsy_buffer += 1
+                    session.alert_buffer = 0
+                else:
+                    session.alert_buffer += 1
+                    session.drowsy_buffer = 0
+                    
+                # Determine the Edge Trigger
+                new_alert_event = False
 
-                # Update drift detector
+                drowsy_limit = settings.to_drowsy_threshold_frames
+                alert_limit = settings.to_alert_threshold_frames
+
+
+                if session.drowsy_buffer >= drowsy_limit and session.current_state != "drowsy":
+                    session.current_state = "drowsy"
+                    new_alert_event = True
+                    
+                    # ✅ THIS IS THE SYNC POINT: One count for Grafana
+                    DROWSY_ALERTS_TOTAL.inc() 
+                    session.drowsy_alerts_triggered += 1
+                    logger.warning(f"🚨 STATE CHANGE: Drowsy Detected (Grafana Synced)")
+
+                elif session.alert_buffer >= alert_limit and session.current_state != "alert":
+                    session.current_state = "alert"
+
+                # Metrics
                 session.drift_detector.update(feature_vector)
-
-                # Prometheus
                 INFERENCE_LATENCY.observe(latency_ms / 1000)
                 PREDICTION_CONFIDENCE.observe(confidence)
 
                 # ── Send prediction to client ─────────────────────────────────
-                alert_triggered = (
-                    state == "drowsy"
-                    and confidence >= settings.confidence_threshold
-                )
-
+                # Note: 'new_alert' tells the Frontend to add a row to the log
                 await websocket.send_json({
                     "type": "prediction",
                     "session_id": session_id,
                     "frame_id": frame_id,
-                    "state": state,
+                    "state": session.current_state,  # Use the synced state
+                    "new_alert": new_alert_event,    # Trigger for the UI log
                     "confidence": round(confidence, 4),
-                    "features": {
-                        k: round(v, 4) for k, v in feature_vector.items()
-                    },
-                    "alert_triggered": alert_triggered,
+                    "features": {k: round(v, 4) for k, v in feature_vector.items()},
                     "inference_latency_ms": round(latency_ms, 2),
                 })
-
-                # ── Send drowsiness alert if triggered ────────────────────────
-                if alert_triggered:
-                    session.drowsy_alerts_triggered += 1
-                    DROWSY_ALERTS_TOTAL.inc()
-                    logger.warning(
-                        f"DROWSY ALERT: session={session_id} "
-                        f"frame={frame_id} confidence={confidence:.3f}"
-                    )
-                    await websocket.send_json({
-                        "type": "alert",
-                        "session_id": session_id,
-                        "frame_id": frame_id,
-                        "severity": "warning",
-                        "message": "Drowsiness detected! Please take a break.",
-                        "confidence": round(confidence, 4),
-                    })
 
                 # ── Periodic drift update (every 100 frames) ──────────────────
                 if session.frames_processed % 100 == 0:

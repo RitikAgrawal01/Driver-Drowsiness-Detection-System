@@ -41,6 +41,11 @@ class SessionState:
         self.current_state: Optional[str] = None
         self.current_confidence: Optional[float] = None
 
+        # To 
+        self.drowsy_buffer = 0
+        self.alert_buffer = 0
+        self.current_state = "alert"
+
         # Sub-services (one per session)
         settings = get_settings()
         self.extractor = FeatureExtractor(

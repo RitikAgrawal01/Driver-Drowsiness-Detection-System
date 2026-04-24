@@ -5,8 +5,8 @@
   "window_size": 2,
   "n_input_frames": 27807,
   "n_output_windows": 27783,
-  "elapsed_sec": 45.36,
-  "throughput_windows_per_sec": 612.5,
+  "elapsed_sec": 49.18,
+  "throughput_windows_per_sec": 564.9,
   "label_distribution": {
     "1": 13947,
     "0": 13836

@@ -41,7 +41,7 @@ groups:
       # ── Data drift detected (from guideline) ──────────────────────────────
       - alert: DataDriftDetected
         expr: ddd_overall_drift_score > 0.15
-        for: 5m
+        for: 2m
         labels:
           severity: critical
           service: backend
@@ -83,7 +83,7 @@ groups:
       # ── Per-feature drift (individual feature alerts) ──────────────────────
       - alert: EARFeatureDrift
         expr: ddd_feature_drift_score{feature="ear_mean"} > 0.20
-        for: 5m
+        for: 2m
         labels:
           severity: warning
           feature: ear_mean
@@ -96,7 +96,7 @@ groups:
 
       - alert: PERCLOSFeatureDrift
         expr: ddd_feature_drift_score{feature="perclos"} > 0.20
-        for: 5m
+        for: 2m
         labels:
           severity: warning
           feature: perclos

@@ -59,8 +59,10 @@ async def predict(request: PredictRequest):
         DROWSY_ALERTS_TOTAL.inc()
 
     # Update global drift detector
-    get_global_detector().update(request.features.model_dump())
-
+    detector = get_global_detector()
+    detector.update(request.features.model_dump())
+    detector.compute_drift_scores()
+    
     logger.info(
         "Prediction",
         state=result.get("state"),

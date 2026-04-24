@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     # ── Inference / alerting ──────────────────────────────────────────────────
     confidence_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
     inference_latency_target_ms: float = 200.0
+    
+    # State Machine Thresholds (Tuned for ~2 FPS feature extraction)
+    to_drowsy_threshold_frames: int = Field(default=3, ge=1, description="Consecutive drowsy frames to trigger alarm")
+    to_alert_threshold_frames: int = Field(default=2, ge=1, description="Consecutive alert frames to clear alarm")
 
     # ── Drift detection ───────────────────────────────────────────────────────
     drift_score_threshold: float = Field(default=0.15, ge=0.0)
@@ -46,7 +50,7 @@ class Settings(BaseSettings):
     drift_window_size: int = Field(default=300, ge=50)  # frames for live dist
 
     # ── CORS ──────────────────────────────────────────────────────────────────
-    cors_origins: list = ["http://localhost:3000", "http://localhost:3001"]
+    cors_origins: list = ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"]
 
     class Config:
         env_file = ".env"

@@ -76,6 +76,8 @@ class FeatureExtractor:
         self.window_size = window_size
         self.ear_threshold = ear_threshold
         self.mar_threshold = mar_threshold
+        
+        self.frame_counter = 0
 
         # Sliding window (deque auto-discards old frames)
         self._window: deque = deque(maxlen=window_size)
@@ -123,10 +125,9 @@ class FeatureExtractor:
         return (v1 + v2) / (2.0 * hd) if hd > 1e-6 else 0.0
 
     def _compute_mar(self, lms, indices: list, w: int, h: int) -> float:
-        """Mouth Aspect Ratio — vertical opening / horizontal width."""
         p = [(lms[i].x * w, lms[i].y * h) for i in indices]
         horizontal = self._dist(p[0], p[1])
-        vertical = self._dist(p[2], p[6])
+        vertical = self._dist(p[4], p[5]) 
         return vertical / horizontal if horizontal > 1e-6 else 0.0
 
     def _compute_head_pose(self, lms, w: int, h: int) -> tuple:
@@ -190,6 +191,19 @@ class FeatureExtractor:
         """
         t_start = time.perf_counter()
 
+        # 1. Increment the counter
+        self.frame_counter += 1
+        
+        # 2. Check if we should skip this frame (Targeting ~2 FPS from a 15 FPS stream)
+        if self.frame_counter < 7:
+            # If window is already full, return existing aggregation so UI stays live
+            if len(self._window) >= self.window_size:
+                return self._aggregate_window()
+            return None
+        
+        # 3. If we reached 7, reset and proceed with heavy extraction
+        self.frame_counter = 0
+
         # ── Decode frame ──────────────────────────────────────────────────────
         try:
             img_bytes = base64.b64decode(frame_b64)
@@ -202,7 +216,8 @@ class FeatureExtractor:
             logger.warning(f"Frame decode error: {e}")
             return None
 
-        h, w = frame_bgr.shape[:2]
+        # Force dimensions to match the training baseline exactly
+        w, h = 640, 480
         frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
 
         # ── MediaPipe ─────────────────────────────────────────────────────────

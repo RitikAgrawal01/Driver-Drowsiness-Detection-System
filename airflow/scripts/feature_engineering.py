@@ -81,7 +81,8 @@ def compute_ear(landmarks: dict, eye_indices: list) -> float:
     Compute Eye Aspect Ratio for one eye.
     EAR = (||p2-p6|| + ||p3-p5||) / (2 * ||p1-p4||)
     """
-    p = [(landmarks[f"lm_{i}_x"], landmarks[f"lm_{i}_y"]) for i in eye_indices]
+    w, h = 640, 480
+    p = [(landmarks[f"lm_{i}_x"] * w, landmarks[f"lm_{i}_y"] * h) for i in eye_indices]
     # p[0]=p1(left), p[1]=p2(upper-left), p[2]=p3(upper-right),
     # p[3]=p4(right), p[4]=p5(lower-right), p[5]=p6(lower-left)
     vertical_1 = euclidean_2d(p[1], p[5])
@@ -101,63 +102,80 @@ def compute_mar(landmarks: dict, mouth_indices: list) -> float:
     """
     if len(mouth_indices) < 8:
         return 0.0
-    p = [(landmarks[f"lm_{i}_x"], landmarks[f"lm_{i}_y"]) for i in mouth_indices]
+    w, h = 640, 480
+    p = [(landmarks[f"lm_{i}_x"] * w, landmarks[f"lm_{i}_y"] * h) for i in mouth_indices]
     # Horizontal: left corner (p[0]) to right corner (p[1])
     horizontal = euclidean_2d(p[0], p[1])
-    # Vertical: upper lip (p[2]) to lower lip (p[6])
-    vertical = euclidean_2d(p[2], p[6])
+    # Vertical: top center lip (p[4]) to bottom center lip (p[5])
+    vertical = euclidean_2d(p[4], p[5])
     if horizontal < 1e-6:
         return 0.0
     return vertical / horizontal
 
 
+import cv2
+
+# Define 3D reference points globally at the top of your file
+HEAD_3D_POINTS = np.array([
+    [0.0,    0.0,    0.0  ],   # nose tip        (lm 1)
+    [0.0,   -63.6, -12.5 ],   # chin            (lm 152)
+    [-43.3,  32.7,  26.0 ],   # left eye corner (lm 226)
+    [43.3,   32.7,  26.0 ],   # right eye corner(lm 446)
+    [-28.9, -28.9,  24.1 ],   # left mouth      (lm 57)
+    [28.9,  -28.9,  24.1 ],   # right mouth     (lm 287)
+], dtype=np.float64)
+
 def compute_head_pose_angles(landmarks: dict) -> tuple:
     """
-    Approximate head pose angles (pitch, yaw, roll) from 6 facial landmarks.
-    Uses a simplified geometric approach:
-      - Pitch:  vertical angle of nose-chin vector vs vertical axis
-      - Yaw:    horizontal asymmetry of left/right eye corners
-      - Roll:   angle of the eye line vs horizontal
-
-    Returns (pitch_deg, yaw_deg, roll_deg)
-
-    Note: For production accuracy, use cv2.solvePnP with a 3D face model.
-    This approximation is sufficient for the sliding-window features.
+    Estimate head pose (pitch, yaw, roll) using solvePnP to match live serving.
     """
     try:
-        # Key points (normalised coords in [0,1])
-        nose_tip = (landmarks["lm_1_x"], landmarks["lm_1_y"])
-        chin = (landmarks["lm_152_x"], landmarks["lm_152_y"])
-        left_eye = (landmarks["lm_226_x"], landmarks["lm_226_y"])
-        right_eye = (landmarks["lm_446_x"], landmarks["lm_446_y"])
-        left_mouth = (landmarks["lm_57_x"], landmarks["lm_57_y"])
-        right_mouth = (landmarks["lm_287_x"], landmarks["lm_287_y"])
+        # We need realistic frame dimensions to build a camera matrix. 
+        # Since this is training data, standard 640x480 is a safe assumption.
+        w, h = 640, 480 
+        
+        # Scale the normalized [0,1] coordinates back to pixel space
+        img_pts = np.array([
+            [landmarks["lm_1_x"] * w, landmarks["lm_1_y"] * h],
+            [landmarks["lm_152_x"] * w, landmarks["lm_152_y"] * h],
+            [landmarks["lm_226_x"] * w, landmarks["lm_226_y"] * h],
+            [landmarks["lm_446_x"] * w, landmarks["lm_446_y"] * h],
+            [landmarks["lm_57_x"] * w, landmarks["lm_57_y"] * h],
+            [landmarks["lm_287_x"] * w, landmarks["lm_287_y"] * h]
+        ], dtype=np.float64)
 
-        # Roll: angle of eye-line with horizontal
-        eye_dx = right_eye[0] - left_eye[0]
-        eye_dy = right_eye[1] - left_eye[1]
-        roll_deg = math.degrees(math.atan2(eye_dy, eye_dx)) if abs(eye_dx) > 1e-6 else 0.0
+        # Camera intrinsics estimate
+        cam_matrix = np.array([
+            [w, 0, w / 2],
+            [0, w, h / 2],
+            [0, 0, 1    ]
+        ], dtype=np.float64)
+        dist_coeffs = np.zeros((4, 1))
 
-        # Pitch: angle of nose-chin line vs vertical
-        # (normalised: more negative = chin dropped = nodding off)
-        nc_dx = chin[0] - nose_tip[0]
-        nc_dy = chin[1] - nose_tip[1]
-        nc_angle = math.degrees(math.atan2(nc_dx, nc_dy))
-        pitch_deg = nc_angle  # positive = head back, negative = nodding forward
+        success, rot_vec, trans_vec = cv2.solvePnP(
+            HEAD_3D_POINTS, img_pts, cam_matrix, dist_coeffs, flags=cv2.SOLVEPNP_ITERATIVE
+        )
+        
+        if not success:
+            return 0.0, 0.0, 0.0
 
-        # Yaw: asymmetry between left-eye-to-nose and right-eye-to-nose distances
-        d_left = euclidean_2d(left_eye, nose_tip)
-        d_right = euclidean_2d(right_eye, nose_tip)
-        eye_span = euclidean_2d(left_eye, right_eye)
-        yaw_deg = 0.0
-        if eye_span > 1e-6:
-            yaw_deg = math.degrees(math.asin(
-                max(-1.0, min(1.0, (d_left - d_right) / eye_span))
-            ))
+        rot_mat, _ = cv2.Rodrigues(rot_vec)
+        sy = math.sqrt(rot_mat[0, 0]**2 + rot_mat[1, 0]**2)
+        singular = sy < 1e-6
 
-        return round(pitch_deg, 4), round(yaw_deg, 4), round(roll_deg, 4)
+        if not singular:
+            pitch = math.degrees(math.atan2( rot_mat[2, 1], rot_mat[2, 2]))
+            yaw   = math.degrees(math.atan2(-rot_mat[2, 0], sy))
+            roll  = math.degrees(math.atan2( rot_mat[1, 0], rot_mat[0, 0]))
+        else:
+            pitch = math.degrees(math.atan2(-rot_mat[1, 2], rot_mat[1, 1]))
+            yaw   = math.degrees(math.atan2(-rot_mat[2, 0], sy))
+            roll  = 0.0
 
-    except (KeyError, ZeroDivisionError, ValueError):
+        return round(pitch, 4), round(yaw, 4), round(roll, 4)
+
+    except Exception as e:
+        logger.debug(f"Head pose failed: {e}")
         return 0.0, 0.0, 0.0
 
 

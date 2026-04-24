@@ -1,0 +1,114 @@
+/* ── Design tokens ─────────────────────────────────────────── */
+:root {
+  --bg-base:      #060809;
+  --bg-surface:   #0C1015;
+  --bg-elevated:  #131920;
+  --bg-card:      #111820;
+
+  --border:       #1E2D3A;
+  --border-bright:#2A3F50;
+
+  --cyan:         #00D4FF;
+  --cyan-dim:     #0099BB;
+  --cyan-glow:    rgba(0,212,255,0.15);
+  --red:          #FF3B3B;
+  --red-dim:      #CC2222;
+  --red-glow:     rgba(255,59,59,0.20);
+  --amber:        #F59E0B;
+  --amber-dim:    #B45309;
+  --green:        #10B981;
+  --purple:       #8B5CF6;
+
+  --text-primary: #E8F0F8;
+  --text-secondary:#7A9AB5;
+  --text-muted:   #3A5068;
+
+  --font-display: 'Syne', sans-serif;
+  --font-mono:    'Space Mono', monospace;
+
+  --radius:       6px;
+  --radius-lg:    12px;
+  --transition:   0.18s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ── Reset ─────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 14px; scroll-behavior: smooth; }
+
+body {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-surface); }
+::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--cyan-dim); }
+
+/* ── Utility classes ───────────────────────────────────────── */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+
+.label {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+}
+
+.badge-green  { background: rgba(16,185,129,0.15); color: var(--green);  border: 1px solid rgba(16,185,129,0.3); }
+.badge-red    { background: rgba(255,59,59,0.15);  color: var(--red);    border: 1px solid rgba(255,59,59,0.3);  }
+.badge-amber  { background: rgba(245,158,11,0.15); color: var(--amber);  border: 1px solid rgba(245,158,11,0.3); }
+.badge-cyan   { background: rgba(0,212,255,0.10);  color: var(--cyan);   border: 1px solid rgba(0,212,255,0.2);  }
+
+/* ── Animations ────────────────────────────────────────────── */
+@keyframes pulse-ring {
+  0%   { transform: scale(0.9); opacity: 1; }
+  70%  { transform: scale(1.4); opacity: 0; }
+  100% { transform: scale(0.9); opacity: 0; }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+@keyframes sweep {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scanline {
+  0%   { top: -20px; }
+  100% { top: 100%; }
+}
+
+.animate-in { animation: fadeSlideUp 0.35s ease forwards; }

@@ -13,8 +13,11 @@ import pickle
 from typing import Optional
 
 import mlflow
+import mlflow.sklearn
+import mlflow.xgboost
 import mlflow.pyfunc
 import numpy as np
+import xgboost as xgb
 
 logger = logging.getLogger("model_loader")
 
@@ -47,18 +50,19 @@ _model_meta = {
 
 
 def load_from_mlflow() -> bool:
-    """
-    Attempt to load the Production model from MLflow registry.
-    Returns True if successful.
-    """
     global _model, _model_meta
     try:
         mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
         model_uri = f"models:/{MLFLOW_MODEL_NAME}/{MLFLOW_MODEL_STAGE}"
         logger.info(f"Loading model from MLflow: {model_uri}")
 
-        loaded = mlflow.pyfunc.load_model(model_uri)
-        _model = loaded
+        try:
+            # Force MLflow to load it as a native XGBoost model
+            _model = mlflow.xgboost.load_model(model_uri)
+            logger.info("Successfully loaded native XGBoost booster.")
+        except Exception as e:
+            logger.warning(f"XGBoost native load failed: {e}. Trying generic pyfunc...")
+            _model = mlflow.pyfunc.load_model(model_uri)
 
         # Get run info for metadata
         from mlflow import MlflowClient
@@ -154,44 +158,39 @@ def is_loaded() -> bool:
     return _model is not None
 
 
+import pandas as pd # Ensure this is imported at the top!
+
 def predict(features: list) -> dict:
-    """
-    Run inference on a feature vector.
-
-    Args:
-        features: list of 9 floats in FEATURE_COLS order
-
-    Returns:
-        dict with keys: state, confidence, model_version
-    """
     if _model is None:
-        raise RuntimeError("Model not loaded. Call load_model() first.")
+        raise RuntimeError("Model not loaded.")
 
     import time
-    X = np.array(features, dtype=np.float32).reshape(1, -1)
-
     t_start = time.perf_counter()
 
-    # Handle both mlflow.pyfunc and raw sklearn/xgboost models
-    if hasattr(_model, "predict_proba"):
-        proba = _model.predict_proba(X)[0]
-    else:
-        # mlflow pyfunc — returns DataFrame
-        import pandas as pd
-        df = pd.DataFrame([dict(zip(FEATURE_COLS, features))])
-        result = _model.predict(df)
-        # pyfunc returns probabilities or class — handle both
-        if hasattr(result, "iloc"):
-            proba = result.iloc[0].values
+    # Create a DataFrame with the exact feature names the model expects
+    df = pd.DataFrame([features], columns=FEATURE_COLS)
+
+    try:
+        raw_output = _model.predict(df)
+        
+        if isinstance(_model, xgb.sklearn.XGBClassifier):
+            proba = _model.predict_proba(np.array([features]))[0]
+            confidence = float(proba[1])
+        elif isinstance(_model, xgb.Booster):
+            dmat = xgb.DMatrix(np.array([features]), feature_names=FEATURE_COLS)
+            confidence = float(_model.predict(dmat)[0]) # Boosters return prob by default
         else:
-            proba = np.array([1 - float(result[0]), float(result[0])])
+            # Fallback for generic pyfunc
+            res = _model.predict(pd.DataFrame([features], columns=FEATURE_COLS))
+            confidence = float(res[0])
+
+    except Exception as e:
+        logger.error(f"Inference math failed: {e}")
+        confidence = 0.0
 
     latency_ms = (time.perf_counter() - t_start) * 1000
-
-    confidence = float(proba[1])   # probability of drowsy class
-    state = "drowsy" if confidence >= float(
-        os.getenv("CONFIDENCE_THRESHOLD", "0.7")
-    ) else "alert"
+    threshold = float(os.getenv("CONFIDENCE_THRESHOLD", "0.5"))
+    state = "drowsy" if confidence >= threshold else "alert"
 
     return {
         "state": state,
