@@ -41,8 +41,8 @@ class Settings(BaseSettings):
     inference_latency_target_ms: float = 200.0
     
     # State Machine Thresholds (Tuned for ~2 FPS feature extraction)
-    to_drowsy_threshold_frames: int = Field(default=3, ge=1, description="Consecutive drowsy frames to trigger alarm")
-    to_alert_threshold_frames: int = Field(default=2, ge=1, description="Consecutive alert frames to clear alarm")
+    to_drowsy_threshold_frames: int = Field(default=15, ge=1, description="Consecutive drowsy frames to trigger alarm")
+    to_alert_threshold_frames: int = Field(default=10, ge=1, description="Consecutive alert frames to clear alarm")
 
     # ── Drift detection ───────────────────────────────────────────────────────
     drift_score_threshold: float = Field(default=0.15, ge=0.0)

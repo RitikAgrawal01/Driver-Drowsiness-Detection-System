@@ -1,24 +1,40 @@
+// ============================================================================
+// LiveMonitor.jsx — Real-time webcam monitoring page
+// ============================================================================
+//
+// CHANGES FROM PREV VERSION:
+//
+//   BUG FIX 1 — Replaced createWebSocket + inline Promise pattern with
+//     the new openWebSocket() from api.js. This eliminates ALL race conditions
+//     and gives a clear error message if WS fails or times out.
+//
+//   BUG FIX 2 — Removed the old commented-out Promise block so there's no
+//     confusion about which code is active.
+//
+//   BUG FIX 3 — Import now includes openWebSocket instead of createWebSocket.
+//
+// ============================================================================
+
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { Camera, CameraOff, AlertTriangle, CheckCircle, Volume2, VolumeX } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import { useWebcam } from '../hooks/useWebcam'
 import { useSessionStore } from '../store/sessionStore'
-import { startSession, stopSession, createWebSocket } from '../services/api'
+import { startSession, stopSession, openWebSocket } from '../services/api'
 import GaugeChart from '../components/charts/GaugeChart'
 
 const FPS = 15  // frames to send per second
 
 export default function LiveMonitor() {
-  const { videoRef, canvasRef, isOn, error: camError, start: startCam, stop: stopCam, captureFrame } = useWebcam()
+  const { videoRef, canvasRef, isOn, error: camError, start: startCam, stop: stopCam } = useWebcam()
   const store = useSessionStore()
   const intervalRef = useRef(null)
-  const audioRef = useRef(null)
   const [sound, setSound] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const alertedRef = useRef(false)
 
-  const isDrowsy = store.currentState === 'drowsy'
+  const isDrowsy   = store.currentState === 'drowsy'
   const isBuffering = store.currentState === 'buffering'
 
   // Play audio alert on drowsy
@@ -26,8 +42,8 @@ export default function LiveMonitor() {
     if (isDrowsy && sound && !alertedRef.current) {
       alertedRef.current = true
       try {
-        const ctx = new AudioContext()
-        const osc = ctx.createOscillator()
+        const ctx  = new AudioContext()
+        const osc  = ctx.createOscillator()
         const gain = ctx.createGain()
         osc.connect(gain); gain.connect(ctx.destination)
         osc.frequency.setValueAtTime(880, ctx.currentTime)
@@ -35,79 +51,87 @@ export default function LiveMonitor() {
         gain.gain.setValueAtTime(0.4, ctx.currentTime)
         gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6)
         osc.start(); osc.stop(ctx.currentTime + 0.6)
-      } catch { /* AudioContext may be blocked */ }
+      } catch { /* AudioContext may be blocked by browser policy */ }
     }
     if (!isDrowsy) alertedRef.current = false
   }, [isDrowsy, sound])
 
   const handleStart = useCallback(async () => {
-    setLoading(true); setError(null)
+    setLoading(true)
+    setError(null)
     try {
+      // 1. Start camera first — if this fails we never touch the backend
       await startCam()
+
+      // 2. Create backend session (10s timeout — fails fast if backend unreachable)
       const session = await startSession(30)
-      store.setSession(session.session_id)
+
+      // Reset store BEFORE setSession so session ID isn't immediately wiped
       store.reset()
+      store.setSession(session.session_id)
 
-      const ws = createWebSocket(store.handleWsMessage, () => {
-        if (store.isActive) handleStop()
-      })
+      // 3. CHANGED: Use openWebSocket() which handles all WS setup atomically.
+      //    Returns a resolved WebSocket, or throws with a clear error message.
+      //    The onClose callback triggers handleStop if session is still active.
+      const ws = await openWebSocket(
+        store.handleWsMessage,
+        () => { if (store.isActive) handleStop() },
+      )
 
-      // Wait for WS open
-      await new Promise((res, rej) => {
-        ws.onopen = res
-        setTimeout(() => rej(new Error('WS timeout')), 5000)
-      })
+      // 4. Send init message — WS is guaranteed open here
+      ws.send(JSON.stringify({
+        type:        'init',
+        session_id:  session.session_id,
+        window_size: 30,
+      }))
 
-      // Send init
-      ws.send(JSON.stringify({ type: 'init', session_id: session.session_id, window_size: 30 }))
       store.setWs(ws)
 
-      // ── HIGH-PERFORMANCE FRAME CAPTURE LOOP ──
-      let lastFrameTime = 0;
-      const frameInterval = 1000 / FPS;
+      // ── HIGH-PERFORMANCE FRAME CAPTURE LOOP (requestAnimationFrame) ──
+      let lastFrameTime = 0
+      const frameInterval = 1000 / FPS
 
       const captureLoop = (timestamp) => {
-        // Only run if the socket is still open
-        if (ws.readyState !== WebSocket.OPEN) return;
+        if (ws.readyState !== WebSocket.OPEN) return
 
-        // Schedule the next frame immediately
-        intervalRef.current = requestAnimationFrame(captureLoop);
+        // Schedule next frame immediately (before heavy work)
+        intervalRef.current = requestAnimationFrame(captureLoop)
 
-        // Throttle to exactly 15 FPS
-        if (timestamp - lastFrameTime < frameInterval) return;
-        lastFrameTime = timestamp;
+        // Throttle to FPS cap
+        if (timestamp - lastFrameTime < frameInterval) return
+        lastFrameTime = timestamp
 
-        const video = videoRef.current;
-        const canvas = canvasRef.current;
-        
+        const video  = videoRef.current
+        const canvas = canvasRef.current
+
         if (video && canvas && video.readyState === 4) {
-          canvas.width = video.videoWidth || 640;
-          canvas.height = video.videoHeight || 480;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(video, 0, 0);
-          
-          const b64 = canvas.toDataURL('image/jpeg', 0.6).split(',')[1];
-          
-          ws.send(JSON.stringify({
-            type: 'frame',
-            session_id: session.session_id,
-            frame_id: Date.now(),
-            image_b64: b64,
-          }));
-        }
-      };
+          canvas.width  = video.videoWidth  || 640
+          canvas.height = video.videoHeight || 480
+          const ctx = canvas.getContext('2d')
+          ctx.drawImage(video, 0, 0)
 
-      // Kick off the loop
-      intervalRef.current = requestAnimationFrame(captureLoop);
+          const b64 = canvas.toDataURL('image/jpeg', 0.6).split(',')[1]
+
+          ws.send(JSON.stringify({
+            type:       'frame',
+            session_id: session.session_id,
+            frame_id:   Date.now(),
+            image_b64:  b64,
+          }))
+        }
+      }
+
+      intervalRef.current = requestAnimationFrame(captureLoop)
 
     } catch (e) {
       setError(e.message)
       stopCam()
+      store.clearSession()
     } finally {
       setLoading(false)
     }
   }, [startCam, stopCam, store])
-  
+
   const handleStop = useCallback(async () => {
     cancelAnimationFrame(intervalRef.current)
     const ws = store.ws
@@ -123,14 +147,25 @@ export default function LiveMonitor() {
     store.clearSession()
   }, [store, stopCam])
 
+  // Cleanup on unmount
   useEffect(() => () => {
     cancelAnimationFrame(intervalRef.current)
     store.ws?.close()
   }, [])
 
+  const stateColor = isDrowsy
+    ? 'var(--red)'
+    : store.currentState === 'alert'
+      ? 'var(--green)'
+      : 'var(--text-muted)'
 
-  const stateColor = isDrowsy ? 'var(--red)' : store.currentState === 'alert' ? 'var(--green)' : 'var(--text-muted)'
-  const stateLabel = isBuffering ? 'CALIBRATING...' : isDrowsy ? 'DROWSY' : store.currentState === 'alert' ? 'ALERT' : 'STANDBY'
+  const stateLabel = isBuffering
+    ? 'CALIBRATING...'
+    : isDrowsy
+      ? 'DROWSY'
+      : store.currentState === 'alert'
+        ? 'ALERT'
+        : 'STANDBY'
 
   return (
     <div style={{ padding: '24px', minHeight: '100vh' }}>
@@ -160,12 +195,14 @@ export default function LiveMonitor() {
           {/* Webcam */}
           <div className="card" style={{ padding: 0, overflow: 'hidden', position: 'relative', aspectRatio: '4/3' }}>
             <video ref={videoRef} autoPlay playsInline muted
-              style={{ width: '100%', height: '100%', objectFit: 'cover',
-                       transform: 'scaleX(-1)',  // mirror
-                       display: isOn ? 'block' : 'none' }} />
+              style={{
+                width: '100%', height: '100%', objectFit: 'cover',
+                transform: 'scaleX(-1)',
+                display: isOn ? 'block' : 'none',
+              }} />
             <canvas ref={canvasRef} style={{ display: 'none' }} />
 
-            {/* Overlay when off */}
+            {/* Overlay when camera is off */}
             {!isOn && (
               <div style={{
                 position: 'absolute', inset: 0,
@@ -243,7 +280,13 @@ export default function LiveMonitor() {
           </div>
 
           {error && (
-            <div style={{ padding: '10px 14px', background: 'rgba(255,59,59,0.1)', border: '1px solid rgba(255,59,59,0.3)', borderRadius: 'var(--radius)', color: 'var(--red)', fontSize: 12 }}>
+            <div style={{
+              padding: '10px 14px',
+              background: 'rgba(255,59,59,0.1)',
+              border: '1px solid rgba(255,59,59,0.3)',
+              borderRadius: 'var(--radius)',
+              color: 'var(--red)', fontSize: 12,
+            }}>
               {error}
             </div>
           )}
@@ -315,10 +358,10 @@ export default function LiveMonitor() {
             <div className="label" style={{ marginBottom: 12 }}>Session Stats</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               {[
-                { label: 'Frames', value: store.framesProcessed.toLocaleString() },
-                { label: 'Alerts', value: store.alertsTriggered, highlight: store.alertsTriggered > 0 },
+                { label: 'Frames',      value: store.framesProcessed.toLocaleString() },
+                { label: 'Alerts',      value: store.alertsTriggered, highlight: store.alertsTriggered > 0 },
                 { label: 'Drift Score', value: store.overallDriftScore.toFixed(3) },
-                { label: 'State', value: store.currentState.toUpperCase() },
+                { label: 'State',       value: store.currentState.toUpperCase() },
               ].map(({ label, value, highlight }) => (
                 <div key={label} style={{
                   background: 'var(--bg-elevated)', padding: '10px 12px',

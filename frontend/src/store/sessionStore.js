@@ -1,4 +1,3 @@
-// sessionStore.js
 import { create } from 'zustand'
 
 export const useSessionStore = create((set, get) => ({
@@ -15,7 +14,7 @@ export const useSessionStore = create((set, get) => ({
   currentMAR: null,
   currentPERCLOS: null,
 
-  // History (last 60 data points for charts)
+  // History (last 120 data points for charts)
   earHistory:        [],
   confidenceHistory: [],
   latencyHistory:    [],
@@ -28,6 +27,7 @@ export const useSessionStore = create((set, get) => ({
   overallDriftScore: 0,
   featureDriftScores: {},
 
+  // KEPT for BroadcastChannel compatibility but no longer used for UI logic
   drowsyBuffer: 0,
   alertBuffer: 0,
 
@@ -46,70 +46,58 @@ export const useSessionStore = create((set, get) => ({
     const MAX = 120
 
     switch (msg.type) {
+
       case 'prediction': {
-        const ear = msg.features?.ear_mean ?? null;
-        
-        const newEarHistory = [...state.earHistory, { t: now, v: ear }].slice(-MAX);
-        const newConfHistory = [...state.confidenceHistory, { t: now, v: msg.confidence }].slice(-MAX);
-        const newLatHistory = [...state.latencyHistory, { t: now, v: msg.inference_latency_ms }].slice(-MAX);
+        const ear = msg.features?.ear_mean ?? null
 
-        const isThisFrameDrowsy = msg.state === 'drowsy';
-        
-        let newDrowsyBuffer = isThisFrameDrowsy ? state.drowsyBuffer + 1 : 0;
-        let newAlertBuffer = !isThisFrameDrowsy ? state.alertBuffer + 1 : 0;
-        let nextState = state.currentState;
+        const newEarHistory  = [...state.earHistory,        { t: now, v: ear }].slice(-MAX)
+        const newConfHistory = [...state.confidenceHistory, { t: now, v: msg.confidence }].slice(-MAX)
+        const newLatHistory  = [...state.latencyHistory,    { t: now, v: msg.inference_latency_ms }].slice(-MAX)
 
-        // --- EDGE TRIGGER LOGIC ---
-        let updatedAlertLog = state.alertLog;
-        let updatedAlertsTriggered = state.alertsTriggered;
+        let updatedAlertLog       = state.alertLog
+        let updatedAlertsTriggered = state.alertsTriggered
 
-        // Check if we are TRANSITIONING to drowsy right now
-        if (newDrowsyBuffer >= 15 && state.currentState !== 'drowsy') {
-          nextState = 'drowsy';
-          
-          // Add ONE entry to the log exactly at the moment of transition
+        if (msg.new_alert) {
+          // CHANGED: was triggered by frontend re-buffer reaching 15.
+          // Now triggered by backend's new_alert flag (single edge event).
           const newEntry = {
             id: now,
             time: new Date().toLocaleTimeString(),
             confidence: msg.confidence,
-            message: "Drowsiness Detected (State Change)",
-          };
-          updatedAlertLog = [newEntry, ...state.alertLog].slice(0, 20);
-          updatedAlertsTriggered += 1;
-        } 
-        
-        if (newAlertBuffer >= 10 && state.currentState !== 'alert') {
-          nextState = 'alert';
+            message: 'Drowsiness Detected',
+          }
+          updatedAlertLog       = [newEntry, ...state.alertLog].slice(0, 20)
+          updatedAlertsTriggered = state.alertsTriggered + 1
         }
 
         set({
-          currentState: nextState,
-          drowsyBuffer: newDrowsyBuffer,
-          alertBuffer: newAlertBuffer,
+          // CHANGED: was 'nextState' computed from frontend buffers.
+          // Now directly uses msg.state from backend.
+          currentState:      msg.state,
           currentConfidence: msg.confidence,
-          currentEAR: ear,
-          currentMAR: msg.features?.mar_mean ?? null,
-          currentPERCLOS: msg.features?.perclos ?? null,
-          framesProcessed: state.framesProcessed + 1,
-          earHistory: newEarHistory,
+          currentEAR:        ear,
+          currentMAR:        msg.features?.mar_mean  ?? null,
+          currentPERCLOS:    msg.features?.perclos   ?? null,
+          framesProcessed:   state.framesProcessed + 1,
+          earHistory:        newEarHistory,
           confidenceHistory: newConfHistory,
-          latencyHistory: newLatHistory,
-          // Update log and counter only if transition happened
-          alertLog: updatedAlertLog,
-          alertsTriggered: updatedAlertsTriggered,
-        });
-        break;
+          latencyHistory:    newLatHistory,
+          alertLog:          updatedAlertLog,
+          alertsTriggered:   updatedAlertsTriggered,
+        })
+        break
       }
 
+      // 'alert' messages from backend are currently informational only
       case 'alert': {
-        break;
+        break
       }
 
       case 'drift_update': {
         set({
-          overallDriftScore: msg.overall_drift_score,
+          overallDriftScore:  msg.overall_drift_score,
           featureDriftScores: msg.feature_scores || {},
-          driftHistory: [...state.driftHistory, { t: now, v: msg.overall_drift_score }].slice(-MAX)
+          driftHistory: [...state.driftHistory, { t: now, v: msg.overall_drift_score }].slice(-MAX),
         })
         break
       }
@@ -118,6 +106,7 @@ export const useSessionStore = create((set, get) => ({
         set({ currentState: 'buffering' })
         break
       }
+
       default: break
     }
   },
@@ -126,6 +115,7 @@ export const useSessionStore = create((set, get) => ({
     earHistory: [], confidenceHistory: [], latencyHistory: [],
     driftHistory: [], alertLog: [], framesProcessed: 0,
     alertsTriggered: 0, currentState: 'idle', overallDriftScore: 0,
+    // KEPT for compat — reset to zero
     drowsyBuffer: 0,
     alertBuffer: 0,
   }),
@@ -133,29 +123,25 @@ export const useSessionStore = create((set, get) => ({
 
 
 // ============================================================================
-// FINAL MULTI-TAB SYNC LOGIC
+// MULTI-TAB SYNC via BroadcastChannel
+// Only the tab with the active WebSocket broadcasts; others mirror it.
 // ============================================================================
-const syncChannel = new BroadcastChannel('ddd_state_sync');
+const syncChannel = new BroadcastChannel('ddd_state_sync')
 
-// 1. RECEIVER: Only update if we are NOT the one running the camera
 syncChannel.onmessage = (event) => {
-  const currentState = useSessionStore.getState();
-  
-  // If this tab doesn't have an active WebSocket, it should mirror the other tab
+  const currentState = useSessionStore.getState()
   if (!currentState.ws) {
-    useSessionStore.setState(event.data);
+    useSessionStore.setState(event.data)
   }
-};
+}
 
-// 2. TRANSMITTER: Only the tab with the active camera broadcasts
 useSessionStore.subscribe((state) => {
-  // If this tab owns the active WebSocket, it is the "Source of Truth"
   if (state.ws && state.isActive) {
     const serializableState = Object.fromEntries(
-      Object.entries(state).filter(([key, value]) => 
+      Object.entries(state).filter(([key, value]) =>
         typeof value !== 'function' && key !== 'ws'
       )
-    );
-    syncChannel.postMessage(serializableState);
+    )
+    syncChannel.postMessage(serializableState)
   }
-});
+})
