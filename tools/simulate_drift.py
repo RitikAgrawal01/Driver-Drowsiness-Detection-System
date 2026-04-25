@@ -281,7 +281,7 @@ def run_simulation(
     print(f"  Throughput       : {round(success_count/elapsed, 1)} req/s")
     print(f"{'='*60}")
     print()
-    print("Now check Grafana at http://localhost:3001")
+    print("Now check Grafana at http://127.0.0.1:3001")
     print("Look for: 'Feature Drift Scores' panel rising above 0.15")
     print("And:      'DataDriftDetected' alert firing in Alerting tab")
     print()
@@ -316,8 +316,8 @@ if __name__ == "__main__":
         help="Number of requests to send (default: 300)",
     )
     parser.add_argument(
-        "--backend-url", default="http://localhost:8000",
-        help="Backend API URL (default: http://localhost:8000)",
+        "--backend-url", default="http://127.0.0.1:8000",
+        help="Backend API URL (default: http://127.0.0.1:8000)",
     )
     parser.add_argument(
         "--delay", type=float, default=0.05,

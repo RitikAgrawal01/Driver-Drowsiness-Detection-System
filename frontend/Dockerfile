@@ -1,32 +1,43 @@
-# ─────────────────────────────────────────────
-# Stage 1: Build React app
-# ─────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────
+# Frontend — React + Vite → Nginx production server
+# ─────────────────────────────────────────────────────────────────
+
+# ── Stage 1: Build React app ─────────────────────────────────
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Install deps first (cache layer)
 COPY package.json package-lock.json* ./
-RUN npm ci
+# Note: npm ci requires a package-lock.json. If it fails, change this to: RUN npm install
+RUN npm ci --silent 
 
-COPY . .
+# Build args injected at docker-compose build time
+# MUST USE 127.0.0.1 INSTEAD OF localhost TO BYPASS WSL/WINDOWS IPv6 BUG
+ARG VITE_BACKEND_URL=http://127.0.0.1:8000
+ARG VITE_WS_URL=ws://127.0.0.1:8000
+ARG VITE_GRAFANA_URL=http://127.0.0.1:3001
+ARG VITE_MLFLOW_URL=http://127.0.0.1:5000
+ARG VITE_AIRFLOW_URL=http://127.0.0.1:8080
+ARG VITE_PROMETHEUS_URL=http://127.0.0.1:9090
 
-# Build args injected at build time
-ARG VITE_BACKEND_URL=http://localhost:8000
-ARG VITE_WS_URL=ws://localhost:8000/ws
 ENV VITE_BACKEND_URL=$VITE_BACKEND_URL
 ENV VITE_WS_URL=$VITE_WS_URL
+ENV VITE_GRAFANA_URL=$VITE_GRAFANA_URL
+ENV VITE_MLFLOW_URL=$VITE_MLFLOW_URL
+ENV VITE_AIRFLOW_URL=$VITE_AIRFLOW_URL
+ENV VITE_PROMETHEUS_URL=$VITE_PROMETHEUS_URL
 
+COPY . .
 RUN npm run build
 
-# ─────────────────────────────────────────────
-# Stage 2: Serve with Nginx
-# ─────────────────────────────────────────────
-FROM nginx:1.25-alpine
+# ── Stage 2: Nginx production server ─────────────────────────
+FROM nginx:1.25-alpine AS runtime
 
 # Copy built assets
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy custom nginx config for React Router (SPA)
+# SPA routing config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80

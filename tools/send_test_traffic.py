@@ -78,12 +78,12 @@ def run(backend_url: str, duration: int, verbose: bool):
     requests.post(f"{backend_url}/session/stop",
                    json={"session_id": session_id})
     print(f"\n✓ Sent {count} requests in {duration}s. "
-          f"Check Grafana at http://localhost:3001")
+          f"Check Grafana at http://127.0.0.1:3001")
 
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
-    p.add_argument("--backend-url", default="http://localhost:8000")
+    p.add_argument("--backend-url", default="http://127.0.0.1:8000")
     p.add_argument("--duration", type=int, default=120)
     p.add_argument("--verbose", action="store_true")
     args = p.parse_args()

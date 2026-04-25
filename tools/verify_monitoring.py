@@ -15,14 +15,14 @@ import time
 import requests
 
 CHECKS = [
-    ("Backend /health",      "http://localhost:8000/health",   200),
-    ("Backend /metrics",     "http://localhost:8000/metrics",  200),
-    ("Backend /ready",       "http://localhost:8000/ready",    None),  # 200 or 503
-    ("Model Server /health", "http://localhost:8001/health",   200),
-    ("Model Server /metrics","http://localhost:8001/metrics",  200),
-    ("Prometheus UI",        "http://localhost:9090/-/ready",  200),
-    ("Grafana UI",           "http://localhost:3001/api/health", 200),
-    ("MLflow UI",            "http://localhost:5000/health",   200),
+    ("Backend /health",      "http://127.0.0.1:8000/health",   200),
+    ("Backend /metrics",     "http://127.0.0.1:8000/metrics",  200),
+    ("Backend /ready",       "http://127.0.0.1:8000/ready",    None),  # 200 or 503
+    ("Model Server /health", "http://127.0.0.1:8001/health",   200),
+    ("Model Server /metrics","http://127.0.0.1:8001/metrics",  200),
+    ("Prometheus UI",        "http://127.0.0.1:9090/-/ready",  200),
+    ("Grafana UI",           "http://127.0.0.1:3001/api/health", 200),
+    ("MLflow UI",            "http://127.0.0.1:5000/health",   200),
 ]
 
 PROMETHEUS_METRICS = [
@@ -53,7 +53,7 @@ def check_url(name: str, url: str, expected_status: int) -> bool:
 def check_prometheus_metrics() -> bool:
     print("\n── Prometheus metric presence ──────────────────────────────")
     try:
-        r = requests.get("http://localhost:8000/metrics", timeout=5)
+        r = requests.get("http://127.0.0.1:8000/metrics", timeout=5)
         body = r.text
         all_ok = True
         for metric in PROMETHEUS_METRICS:
@@ -72,7 +72,7 @@ def check_prometheus_targets() -> bool:
     print("\n── Prometheus scrape targets ───────────────────────────────")
     try:
         r = requests.get(
-            "http://localhost:9090/api/v1/targets", timeout=5
+            "http://127.0.0.1:9090/api/v1/targets", timeout=5
         )
         if r.status_code != 200:
             print(f"  ✗ Prometheus API returned {r.status_code}")
@@ -97,7 +97,7 @@ def check_alert_rules() -> bool:
     print("\n── Prometheus alert rules ──────────────────────────────────")
     try:
         r = requests.get(
-            "http://localhost:9090/api/v1/rules", timeout=5
+            "http://127.0.0.1:9090/api/v1/rules", timeout=5
         )
         data = r.json()
         groups = data.get("data", {}).get("groups", [])
@@ -141,7 +141,7 @@ if __name__ == "__main__":
         print("║   ALL CHECKS PASSED ✓                                   ║")
         print("║                                                          ║")
         print("║   Next steps:                                            ║")
-        print("║   1. Open Grafana: http://localhost:3001 (admin/admin)   ║")
+        print("║   1. Open Grafana: http://127.0.0.1:3001 (admin/admin)   ║")
         print("║   2. Warm up metrics: python tools/send_test_traffic.py  ║")
         print("║   3. Simulate drift:  python tools/simulate_drift.py     ║")
         print("║              --mode lighting --count 300                 ║")

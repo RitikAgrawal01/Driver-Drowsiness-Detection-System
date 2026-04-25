@@ -50,7 +50,15 @@ class Settings(BaseSettings):
     drift_window_size: int = Field(default=300, ge=50)  # frames for live dist
 
     # ── CORS ──────────────────────────────────────────────────────────────────
-    cors_origins: list = ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"]
+    cors_origins: list = [
+        "http://localhost:3000", 
+        "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3001", 
+        "http://localhost:3002",
+        "http://127.0.0.1:3002",
+        "http://frontend:80"
+    ]
 
     class Config:
         env_file = ".env"

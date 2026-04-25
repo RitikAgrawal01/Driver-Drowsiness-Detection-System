@@ -1,39 +1,39 @@
-# ─────────────────────────────────────────────
-# Stage 1: Builder
-# ─────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────
+# Backend — FastAPI + MediaPipe + WebSocket
+# Multi-stage build: builder installs deps, runtime is slim
+# ─────────────────────────────────────────────────────────────────
+
+# ── Stage 1: Builder ──────────────────────────────────────────
 FROM python:3.11-slim AS builder
 
 WORKDIR /app
 
-# Install build dependencies
+# System libs needed to compile MediaPipe / OpenCV wheels
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
     libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
     libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 RUN pip install --upgrade pip && \
-    pip install --no-cache-dir --prefix=/install \
-    --default-timeout=1000 \
-    --prefer-binary \
-    -i https://pypi.tuna.tsinghua.edu.cn/simple \
-    mediapipe==0.10.11 --no-deps && \
-    pip install --no-cache-dir --prefix=/install \
-    --default-timeout=1000 \
-    --prefer-binary \
-    -i https://pypi.tuna.tsinghua.edu.cn/simple \
-    -r requirements.txt
+    pip install --no-cache-dir --prefix=/install -r requirements.txt
 
-# ─────────────────────────────────────────────
-# Stage 2: Runtime
-# ─────────────────────────────────────────────
-FROM python:3.11-slim
+# ── Stage 2: Runtime ─────────────────────────────────────────
+FROM python:3.11-slim AS runtime
 
 WORKDIR /app
 
-# Runtime system dependencies for OpenCV and MediaPipe
+# Runtime system deps (no build tools)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
     libgl1 \
     curl \
     && rm -rf /var/lib/apt/lists/*
@@ -41,21 +41,27 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy installed packages from builder
 COPY --from=builder /install /usr/local
 
-# Create non-root user for security
+# Non-root user for security
 RUN useradd -m -u 1000 appuser && \
-    mkdir -p /app/logs && \
+    mkdir -p /app/logs/backend && \
     chown -R appuser:appuser /app
 
-COPY --chown=appuser:appuser . .
-
-# USER appuser
-
+# Copy application source into a preserved package directory
 COPY --chown=appuser:appuser . /app/backend
+
+USER appuser
+
+# Tell Python where to find the 'backend' package
+ENV PYTHONPATH=/app
 
 EXPOSE 8000
 
-# Health check uses the /health endpoint
-HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Tell uvicorn to run from inside the backend package
+CMD ["uvicorn", "backend.main:app", \
+     "--host", "0.0.0.0", \
+     "--port", "8000", \
+     "--workers", "1", \
+     "--log-level", "info"]

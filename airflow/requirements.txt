@@ -1,22 +1,27 @@
-# ── Airflow core ──────────────────────────────
+# ── Airflow & Orchestration ────────────────────────────────────
 apache-airflow==2.9.1
-apache-airflow-providers-apache-spark==4.7.1
 
-# ── PySpark ───────────────────────────────────
+# ── Big Data Processing ────────────────────────────────────────
 pyspark==3.5.1
+pandas==2.2.2
 
-# ── MediaPipe & CV ────────────────────────────
+# ── Feature Extraction ─────────────────────────────────────────
 mediapipe==0.10.11
 opencv-python-headless==4.9.0.80
+
+# ── MediaPipe Sub-Dependencies (Docker Build Speed-Hacks) ──────
+absl-py==2.4.0
+flatbuffers==25.12.19
+attrs==23.2.0
+protobuf>=3.20,<4
+
+# ── Machine Learning Models ────────────────────────────────────
+xgboost==2.0.3
+scikit-learn==1.4.2
 numpy==1.26.4
-
-# ── DVC ───────────────────────────────────────
-dvc==3.49.0
-
-# ── MLflow ────────────────────────────────────
-mlflow==2.11.1
-
-# ── Utilities ─────────────────────────────────
-pandas==2.2.2
 scipy==1.13.0
+
+# ── MLOps Tools ────────────────────────────────────────────────
+dvc==3.49.0
+mlflow==2.11.1
 python-dotenv==1.0.1
