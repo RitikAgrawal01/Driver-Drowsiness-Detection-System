@@ -71,3 +71,32 @@ models/
 
 # OS
 .DS_Store
+
+# ── AIRFLOW ────────────────────────────────
+# Ignore the persistent database we created so you don't commit your local login state
+airflow/airflow.db
+airflow/airflow.db-journal
+# Ignore local Airflow execution logs
+airflow/logs/
+logs/
+
+# ── MLFLOW ─────────────────────────────────
+# Ignore the temporary permission-hack folder we created
+mlflow_temp/
+# Ignore MLflow artifacts and local SQLite database
+mlartifacts/
+mlflow.db
+
+# ── MODELS & DATA ──────────────────────────
+# Git should not track models (DVC handles these)
+models/*.pkl
+models/*.joblib
+
+# ── REPORTS ────────────────────────────────
+# Ignore the auto-generated JSON reports and images from the retraining pipeline
+reports/*.json
+reports/*.png
+reports/confusion_matrix_xgb.png
+reports/feature_importance_xgb.png
+reports/confusion_matrix_svm.png
+reports/roc_curve.png

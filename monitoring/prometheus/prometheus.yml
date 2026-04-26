@@ -6,6 +6,14 @@ global:
 rule_files:
   - "alert_rules.yml"
 
+# ── Alertmanager (routes firing alerts to webhook server) ─────────────────────
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - "host.docker.internal:9095"   # webhook server running on host
+      timeout: 10s
+
 scrape_configs:
 
   - job_name: "prometheus"

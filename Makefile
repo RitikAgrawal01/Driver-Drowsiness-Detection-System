@@ -140,3 +140,55 @@ clean-docker:
 	docker compose down --remove-orphans
 	docker image prune -f
 	@echo "✓ Docker cleaned"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 9 — Retraining Pipeline commands
+# ─────────────────────────────────────────────────────────────────────────────
+
+.PHONY: retrain retrain-force webhook webhook-trigger retrain-status model-reload
+
+# Start the Prometheus → Airflow webhook bridge
+webhook:
+	@echo "→ Starting Prometheus webhook bridge on port 9095..."
+	python tools/prometheus_webhook.py --port 9095 \
+	    --airflow-url http://127.0.0.1:8080
+
+# Manually trigger retraining via webhook bridge (demo command)
+webhook-trigger:
+	@echo "→ Manually triggering retraining DAG..."
+	curl -X POST http://127.0.0.1:9095/trigger \
+	    -H "Content-Type: application/json" \
+	    -d '{"reason": "manual_demo_trigger"}' | python3 -m json.tool
+
+# Trigger retraining DAG directly via Airflow API (no webhook bridge needed)
+retrain:
+	@echo "→ Triggering ddd_retrain_pipeline DAG..."
+	curl -X POST http://127.0.0.1:8080/api/v1/dags/ddd_retrain_pipeline/dagRuns \
+	    -H "Content-Type: application/json" \
+	    -u admin:admin \
+	    -d '{"dag_run_id": "manual__$(shell date +%Y%m%dT%H%M%S)", "conf": {"retrain_reason": "manual"}}' \
+	    | python3 -m json.tool
+
+# Force retrain (skip drift/F1 threshold checks)
+retrain-force:
+	@echo "→ Force-triggering ddd_retrain_pipeline DAG (skipping threshold checks)..."
+	curl -X POST http://127.0.0.1:8080/api/v1/dags/ddd_retrain_pipeline/dagRuns \
+	    -H "Content-Type: application/json" \
+	    -u admin:admin \
+	    -d '{"dag_run_id": "force__$(shell date +%Y%m%dT%H%M%S)", "conf": {"force_retrain": true}}' \
+	    | python3 -m json.tool
+
+# Check status of the last retraining run
+retrain-status:
+	@echo "→ Last 3 ddd_retrain_pipeline runs:"
+	curl -s http://127.0.0.1:8080/api/v1/dags/ddd_retrain_pipeline/dagRuns?limit=3 \
+	    -u admin:admin | python3 -m json.tool
+
+# Reload model server after manual promotion (if hot-reload not available)
+model-reload:
+	@echo "→ Restarting model server to load new Production model..."
+	docker compose restart model_server
+	@echo "→ Waiting for model server to be healthy..."
+	sleep 20
+	curl -s http://127.0.0.1:8001/ready | python3 -m json.tool

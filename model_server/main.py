@@ -25,6 +25,7 @@ import os
 sys.path.insert(0, os.path.dirname(__file__))
 
 from model_loader import load_model, get_model_meta, is_loaded, predict
+from admin import router as admin_router
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -125,6 +126,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(admin_router)
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 

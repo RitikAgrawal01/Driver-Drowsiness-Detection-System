@@ -228,23 +228,36 @@ services:
     ports:
       - "${AIRFLOW_PORT:-8080}:8080"
     environment:
-      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=sqlite:////opt/airflow/airflow.db
       - AIRFLOW__CORE__FERNET_KEY=${AIRFLOW__CORE__FERNET_KEY:-}
       - AIRFLOW__WEBSERVER__SECRET_KEY=${AIRFLOW__CORE__FERNET_KEY:-supersecretkey}
+      - AIRFLOW__API__AUTH_BACKENDS=airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session
       - DATA_DIR=/app/data
       - REPORTS_DIR=/app/reports
       - SCRIPTS_DIR=/opt/airflow/scripts
       - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - MLFLOW_LOCAL_RESOURCES_PATH=/tmp/mlflow
+      - MLFLOW_ARTIFACT_DESTINATION=/tmp/mlflow
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/scripts:/opt/airflow/scripts
       - ./airflow/plugins:/opt/airflow/plugins
+      - ./airflow/airflow.db:/opt/airflow/airflow.db
       - airflow_logs:/opt/airflow/logs
       - ./data:/app/data
       - ./reports:/app/reports
+      - ./models:/app/models
       - dvc_remote:/app/dvc_remote
+      # ── NEW Phase 9 Mounts for Retraining DAG ──
+      - ./model_server:/app/model_server:ro
+      - ./params.yaml:/app/params.yaml:ro
+      - ./.dvc:/app/.dvc:ro
+      - ./dvc.yaml:/app/dvc.yaml:ro
+      - ./.git:/app/.git:ro 
+      - ./backend:/app/backend:ro
+      - ./mlflow_temp:/mlflow
     depends_on:
       mlflow:
         condition: service_started
@@ -254,10 +267,7 @@ services:
     command: >
       bash -c "
         airflow db migrate &&
-        airflow users create
-          --username admin --password admin
-          --firstname Admin --lastname User
-          --role Admin --email admin@example.com 2>/dev/null || true &&
+        airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com || true &&
         airflow webserver &
         airflow scheduler
       "
