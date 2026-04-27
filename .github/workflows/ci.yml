@@ -259,11 +259,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Verify images built
-        run: |
-          docker images | grep ddd
-          echo "✓ All Docker images built successfully"
-
   # ── Job 5: CI Summary ─────────────────────────────────────────────────────
   ci-summary:
     name: "CI Summary"
