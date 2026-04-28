@@ -49,13 +49,13 @@ frontend/.env.local
 frontend/dist/
 frontend/build/
 
-# Data (tracked by DVC, not Git)
-data/
-data/raw/
-data/landmarks/
-data/features/
-data/processed/
-data/frames
+# ── Data (Exclude folders but allow .dvc files) ──────────────────────────
+data/**
+!data/**/
+!data/**/*.dvc
+!data/.gitkeep
+
+# Exclude specific heavy formats
 *.csv
 *.parquet
 *.h5
@@ -100,3 +100,5 @@ reports/confusion_matrix_xgb.png
 reports/feature_importance_xgb.png
 reports/confusion_matrix_svm.png
 reports/roc_curve.png
+
+*.whl

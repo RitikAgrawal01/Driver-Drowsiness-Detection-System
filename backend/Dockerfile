@@ -19,9 +19,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
+# Upgrade pip first
+RUN pip install --upgrade pip
+
+# ── THE SAVE POINTS ──
+RUN pip install --no-cache-dir --prefix=/install opencv-python-headless==4.9.0.80
+
+# 1. Install MediaPipe offline
+COPY mediapipe-0.10.11-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl .
+RUN pip install --no-cache-dir --no-deps --prefix=/install mediapipe-0.10.11-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+
+# 2. Install PyTorch offline
+COPY torch-2.11.0-cp311-cp311-manylinux_2_28_x86_64.whl .
+RUN pip install --no-cache-dir --no-deps --prefix=/install torch-2.11.0-cp311-cp311-manylinux_2_28_x86_64.whl
+
+# 3. Copy requirements and apply the Ghost Hack
 COPY requirements.txt .
-RUN pip install --upgrade pip && \
-    pip install --no-cache-dir --prefix=/install -r requirements.txt
+RUN sed -i '/mediapipe/d' requirements.txt
+
+# 4. Install the remaining files
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 # ── Stage 2: Runtime ─────────────────────────────────────────
 FROM python:3.11-slim AS runtime

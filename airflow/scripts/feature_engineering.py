@@ -48,9 +48,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger("feature_engineering")
 
+DEFAULT_DATA_DIR = "/app/data" if os.path.exists("/app/data") else "data"
+
 # ── Config ────────────────────────────────────────────────────────────────────
-LANDMARKS_CSV = os.getenv("LANDMARKS_CSV", "data/landmarks/landmarks.csv")
-FEATURES_DIR = os.getenv("FEATURES_DIR", "data/features")
+LANDMARKS_CSV = os.getenv("LANDMARKS_CSV", os.path.join(DEFAULT_DATA_DIR, "landmarks/landmarks.csv"))
+FEATURES_DIR = os.getenv("FEATURES_DIR", os.path.join(DEFAULT_DATA_DIR, "features"))
 FEATURES_CSV = os.path.join(FEATURES_DIR, "features.csv")
 BASELINE_JSON = os.path.join(FEATURES_DIR, "baseline.json")
 WINDOW_SIZE = int(os.getenv("SLIDING_WINDOW_SIZE", "30"))

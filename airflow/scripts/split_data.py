@@ -32,10 +32,13 @@ logging.basicConfig(
 logger = logging.getLogger("split_data")
 
 # ── Config ────────────────────────────────────────────────────────────────────
-FEATURES_CSV = os.getenv("FEATURES_CSV", "data/features/features.csv")
-PROCESSED_DIR = os.getenv("PROCESSED_DIR", "data/processed")
+DEFAULT_DATA_DIR = "/app/data" if os.path.exists("/app/data") else "data"
+
+FEATURES_CSV = os.getenv("FEATURES_CSV", os.path.join(DEFAULT_DATA_DIR, "features/features.csv"))
+PROCESSED_DIR = os.getenv("PROCESSED_DIR", os.path.join(DEFAULT_DATA_DIR, "processed"))
 TRAIN_CSV = os.path.join(PROCESSED_DIR, "train.csv")
 TEST_CSV = os.path.join(PROCESSED_DIR, "test.csv")
+
 TEST_SIZE = float(os.getenv("TEST_SIZE", "0.2"))
 RANDOM_STATE = int(os.getenv("RANDOM_STATE", "42"))
 

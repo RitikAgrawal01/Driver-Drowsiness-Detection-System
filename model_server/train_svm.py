@@ -280,7 +280,7 @@ def train(params: dict) -> dict:
         mlflow.sklearn.log_model(
             svm_pipeline,
             artifact_path="svm_model",
-            registered_model_name=f"{MLFLOW_MODEL_NAME}_svm",
+            registered_model_name=MLFLOW_MODEL_NAME,
             input_example=pd.DataFrame(
                 [dict(zip(FEATURE_COLS, X_test[0]))],
                 columns=FEATURE_COLS

@@ -146,18 +146,29 @@ export function createWebSocket(onMessage, onClose) {
 }
 
 // ── Airflow ───────────────────────────────────────────────────
-const AIRFLOW_BASE = import.meta.env.VITE_AIRFLOW_URL || 'http://localhost:8080'
+// Force 127.0.0.1 to match your new CORS rules perfectly
+const AIRFLOW_BASE = import.meta.env.VITE_AIRFLOW_URL || 'http://127.0.0.1:8080'
+const AUTH_HEADER = 'Basic ' + btoa('admin:admin')
 
-export async function getAirflowDagRuns(dagId = 'ddd_data_pipeline') {
+export async function getAirflowDagRuns(dagId) {
   try {
     const res = await fetch(
       `${AIRFLOW_BASE}/api/v1/dags/${dagId}/dagRuns?limit=10&order_by=-execution_date`,
-      { headers: { 'Authorization': 'Basic ' + btoa('admin:admin') } },
+      { 
+        headers: { 
+          'Authorization': AUTH_HEADER,
+          'Content-Type': 'application/json' 
+        } 
+      }
     )
-    if (!res.ok) throw new Error('Airflow not reachable')
-    return res.json()
-  } catch {
-    return { dag_runs: MOCK_DAG_RUNS }
+    if (!res.ok) {
+      throw new Error(`Airflow API HTTP Error: ${res.status}`)
+    }
+    return await res.json()
+  } catch (err) {
+    console.error(`Failed to fetch DAG runs for ${dagId}:`, err)
+    // Return an EMPTY array instead of mock data so the UI shows "No runs found"
+    return { dag_runs: [] } 
   }
 }
 
@@ -165,32 +176,73 @@ export async function getAirflowTaskInstances(dagId, dagRunId) {
   try {
     const res = await fetch(
       `${AIRFLOW_BASE}/api/v1/dags/${dagId}/dagRuns/${dagRunId}/taskInstances`,
-      { headers: { 'Authorization': 'Basic ' + btoa('admin:admin') } },
+      { 
+        headers: { 
+          'Authorization': AUTH_HEADER,
+          'Content-Type': 'application/json' 
+        } 
+      }
     )
-    if (!res.ok) throw new Error()
-    return res.json()
-  } catch {
-    return { task_instances: MOCK_TASK_INSTANCES }
+    if (!res.ok) {
+      throw new Error(`Airflow API HTTP Error: ${res.status}`)
+    }
+    return await res.json()
+  } catch (err) {
+    console.error(`Failed to fetch tasks for ${dagRunId}:`, err)
+    return { task_instances: [] }
   }
 }
 
-// ── Mock data (fallback when services not running) ────────────
-const now = new Date()
-const MOCK_DAG_RUNS = Array.from({ length: 5 }, (_, i) => ({
-  dag_run_id: `manual__2026-04-${String(15 - i).padStart(2, '0')}`,
-  dag_id: 'ddd_data_pipeline',
-  execution_date: new Date(now - i * 86400000).toISOString(),
-  state: i === 0 ? 'success' : i === 1 ? 'running' : 'success',
-  start_date: new Date(now - i * 86400000 - 3600000).toISOString(),
-  end_date: i === 1 ? null : new Date(now - i * 86400000).toISOString(),
-}))
+// ── MLflow ────────────────────────────────────────────────────
+// Force 127.0.0.1 to match Docker networking
+const MLFLOW_BASE = import.meta.env.VITE_MLFLOW_URL || 'http://127.0.0.1:5000'
 
-const MOCK_TASK_INSTANCES = [
-  { task_id: 't0_validate_raw_data',   state: 'success', duration: 2.1 },
-  { task_id: 't1_extract_frames',      state: 'success', duration: 182.4 },
-  { task_id: 't2_extract_landmarks',   state: 'success', duration: 341.7 },
-  { task_id: 't3_feature_engineering', state: 'success', duration: 54.2 },
-  { task_id: 't4_split_data',          state: 'success', duration: 1.8 },
-  { task_id: 't5_dvc_add_and_push',    state: 'success', duration: 8.3 },
-  { task_id: 't6_pipeline_summary',    state: 'success', duration: 0.6 },
-]
+export async function getMLflowRuns() {
+  try {
+    // 🔥 CHANGED: Ask FastAPI to get the data for us!
+    const res = await fetch(`${BASE}/api/mlflow/runs/search`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ experiment_ids: ['0', '1'], max_results: 10 })
+    })
+    
+    if (!res.ok) throw new Error(`API Proxy Error: ${res.status}`)
+    
+    const data = await res.json()
+    const runs = data.runs || []
+
+    // Translate MLflow's array format into flat dictionaries for React
+    return runs.map(r => {
+      const metricsArr = r.data?.metrics || []
+      const paramsArr = r.data?.params || []
+      const tagsArr = r.data?.tags || []
+
+      const metrics = Object.fromEntries(metricsArr.map(m => [m.key, m.value]))
+      const params = Object.fromEntries(paramsArr.map(p => [p.key, p.value]))
+      const tags = Object.fromEntries(tagsArr.map(t => [t.key, t.value]))
+
+      // Try to determine the model type from params, tags, or run name
+      const runName = tags['mlflow.runName'] || r.info.run_name || 'unnamed'
+      let modelType = params['model_type'] || 'Unknown'
+      if (modelType === 'Unknown') {
+        if (runName.toLowerCase().includes('xgb')) modelType = 'XGBoost'
+        else if (runName.toLowerCase().includes('svm')) modelType = 'SVM'
+      }
+
+      return {
+        run_id: r.info.run_id,
+        run_name: runName,
+        model_type: modelType,
+        status: r.info.status,
+        start_time: new Date(r.info.start_time).toISOString(),
+        metrics: metrics,
+        params: params,
+        // If you logged a stage tag, use it. Otherwise guess based on F1 > 0.90
+        stage: tags['stage'] || (metrics['f1_weighted'] > 0.90 ? 'Production' : 'Archived'),
+      }
+    })
+  } catch (err) {
+    console.error("Failed to fetch MLflow runs:", err)
+    return [] // Return empty array so UI shows "Loading..." or empty state
+  }
+}

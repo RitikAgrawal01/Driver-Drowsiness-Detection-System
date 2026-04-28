@@ -56,8 +56,8 @@ stages:
     deps:
     - path: airflow/scripts/feature_engineering.py
       hash: md5
-      md5: 06fc38d3baf662892239d2804e9624b8
-      size: 19207
+      md5: 40087a3537c0f2ba54d1a85689b0660a
+      size: 19336
     - path: data/landmarks/landmarks.csv
       hash: md5
       md5: 737341634ce430f35c166aaff8ed76d2
@@ -70,27 +70,27 @@ stages:
     outs:
     - path: data/features/baseline.json
       hash: md5
-      md5: a5b2028d14264d2cb7c9fe9bd9be5b9e
-      size: 9533
+      md5: 72f8ed016e7233d4463c1beaa10679a8
+      size: 9759
     - path: data/features/features.csv
       hash: md5
-      md5: ac7a25cc82a297983b87e3b011141a48
-      size: 3284077
+      md5: 8aa60abdde17582bd8f5eeeacc497600
+      size: 4264014
     - path: reports/feature_engineering_summary.json
       hash: md5
-      md5: 319014eaef9de6be887c640d03cc4864
-      size: 362
+      md5: 57fa15bb4b7930d8a03712c7a1cd17c3
+      size: 378
   split_data:
     cmd: python airflow/scripts/split_data.py
     deps:
     - path: airflow/scripts/split_data.py
       hash: md5
-      md5: 2e2c2a1ef12bdedf2cb1b9e4ffe8aac7
-      size: 3455
+      md5: e8345bfd8f88e0ab21919bec118d404d
+      size: 3585
     - path: data/features/features.csv
       hash: md5
-      md5: ac7a25cc82a297983b87e3b011141a48
-      size: 3284077
+      md5: 8aa60abdde17582bd8f5eeeacc497600
+      size: 4264014
     params:
       params.yaml:
         split.random_state: 42
@@ -98,12 +98,12 @@ stages:
     outs:
     - path: data/processed/test.csv
       hash: md5
-      md5: da2fff2261c3835998ddee9330ba0539
-      size: 613397
+      md5: bee4d7f81b34e637f7ffcceffa914335
+      size: 823398
     - path: data/processed/train.csv
       hash: md5
-      md5: 8926cd90fbaaacf7922cc8d86fe5197d
-      size: 2457023
+      md5: cf54457b4349a769e75aba89b4875541
+      size: 3288122
     - path: reports/split_summary.json
       hash: md5
       md5: cd72303634d931818c141f5c234bde2c

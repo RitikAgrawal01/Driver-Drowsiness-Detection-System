@@ -141,3 +141,21 @@ async def status():
 async def metrics():
     """Prometheus metrics scraping endpoint."""
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
+import requests
+from fastapi import Request
+
+@app.post("/api/mlflow/runs/search")
+async def proxy_mlflow_search(request: Request):
+    """
+    Acts as a middleman to fetch MLflow data so the React frontend 
+    doesn't get blocked by MLflow's lack of CORS support.
+    """
+    body = await request.json()
+    
+    # Send the request from FastAPI to MLflow (Backend-to-Backend)
+    mlflow_url = "http://mlflow:5000/api/2.0/mlflow/runs/search"
+    response = requests.post(mlflow_url, json=body)
+    
+    return response.json()

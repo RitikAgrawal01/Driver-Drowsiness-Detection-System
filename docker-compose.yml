@@ -54,6 +54,9 @@ services:
     container_name: ddd_frontend
     ports:
       - "${FRONTEND_PORT:-3000}:80"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     depends_on:
       backend:
         condition: service_healthy
@@ -240,6 +243,10 @@ services:
       - MLFLOW_TRACKING_URI=http://mlflow:5000
       - MLFLOW_LOCAL_RESOURCES_PATH=/tmp/mlflow
       - MLFLOW_ARTIFACT_DESTINATION=/tmp/mlflow
+      - AIRFLOW__API__ACCESS_CONTROL_ALLOW_ORIGINS=*
+      - AIRFLOW__API__ACCESS_CONTROL_ALLOW_HEADERS=origin, content-type, accept, authorization
+      - AIRFLOW__API__ACCESS_CONTROL_ALLOW_METHODS=POST, GET, OPTIONS, DELETE
+      - FEATURES_CSV=/app/data/features/features.csv
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/scripts:/opt/airflow/scripts

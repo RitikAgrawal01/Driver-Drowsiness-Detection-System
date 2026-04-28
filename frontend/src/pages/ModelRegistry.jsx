@@ -1,68 +1,11 @@
 import { useEffect, useState } from 'react'
-import { ExternalLink, Trophy, Cpu, TrendingUp } from 'lucide-react'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, RadarChart, PolarGrid, PolarAngleAxis, Radar } from 'recharts'
+import { ExternalLink, Trophy } from 'lucide-react'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { getMLflowRuns } from '../services/api' // <-- IMPORTING THE NEW API
 
-const MLFLOW = import.meta.env.VITE_MLFLOW_URL || 'http://localhost:5000'
-
-// Mock MLflow data — replaced by real API calls when MLflow is running
-const MOCK_EXPERIMENTS = [
-  {
-    run_id: 'abc123',
-    run_name: 'xgboost_training',
-    model_type: 'XGBoost',
-    status: 'FINISHED',
-    start_time: new Date(Date.now() - 7200000).toISOString(),
-    metrics: { f1_weighted: 0.912, accuracy: 0.924, auc_roc: 0.963, latency_p95_ms: 4.2 },
-    params: { n_estimators: '200', max_depth: '6', learning_rate: '0.1' },
-    stage: 'Production',
-  },
-  {
-    run_id: 'def456',
-    run_name: 'svm_training',
-    model_type: 'SVM',
-    status: 'FINISHED',
-    start_time: new Date(Date.now() - 3600000).toISOString(),
-    metrics: { f1_weighted: 0.883, accuracy: 0.891, auc_roc: 0.941, latency_p95_ms: 22.7 },
-    params: { kernel: 'rbf', C: '1.0', gamma: 'scale' },
-    stage: 'Archived',
-  },
-  {
-    run_id: 'ghi789',
-    run_name: 'model_evaluation',
-    model_type: 'Evaluation',
-    status: 'FINISHED',
-    start_time: new Date(Date.now() - 1800000).toISOString(),
-    metrics: { xgb_f1_weighted: 0.912, svm_f1_weighted: 0.883, winner_f1: 0.912 },
-    params: { winner: 'XGBoost', promoted_version: '1' },
-    stage: null,
-  },
-]
-
-async function fetchMLflowRuns() {
-  try {
-    const res = await fetch(`${MLFLOW}/api/2.0/mlflow/runs/search`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ experiment_ids: ['1'], max_results: 20 }),
-    })
-    if (!res.ok) throw new Error()
-    const data = await res.json()
-    return (data.runs || []).map(r => ({
-      run_id: r.info.run_id,
-      run_name: r.info.run_name || r.data?.tags?.['mlflow.runName'] || 'unnamed',
-      model_type: r.data?.params?.model_type || 'Unknown',
-      status: r.info.status,
-      start_time: new Date(r.info.start_time).toISOString(),
-      metrics: r.data?.metrics || {},
-      params: r.data?.params || {},
-      stage: null,
-    }))
-  } catch {
-    return MOCK_EXPERIMENTS
-  }
-}
-
+const MLFLOW = import.meta.env.VITE_MLFLOW_URL || 'http://127.0.0.1:5000'
 const stageColor = { Production: 'var(--green)', Staging: 'var(--amber)', Archived: 'var(--text-muted)' }
+const MODEL_COLORS = { XGBoost: 'var(--cyan)', SVM: 'var(--purple)', Unknown: 'var(--amber)' }
 
 export default function ModelRegistry() {
   const [runs, setRuns] = useState([])
@@ -70,24 +13,24 @@ export default function ModelRegistry() {
   const [selected, setSelected] = useState(null)
 
   useEffect(() => {
-    fetchMLflowRuns().then(data => {
-      setRuns(data)
-      setSelected(data[0] || null)
+    getMLflowRuns().then(data => {
+      // Filter out empty/failed runs that don't have metrics yet
+      const validRuns = data.filter(r => r.metrics && Object.keys(r.metrics).length > 0)
+      setRuns(validRuns)
+      setSelected(validRuns[0] || null)
       setLoading(false)
     })
   }, [])
 
-  const trainingRuns = runs.filter(r => r.run_name !== 'model_evaluation')
-  const winner = trainingRuns.find(r => r.stage === 'Production') || trainingRuns[0]
+  // Find the current production model
+  const winner = runs.find(r => r.stage === 'Production') || runs[0]
 
-  // Comparison bar chart data
+  // Prepare data for the Bar Chart comparing models
   const comparisonData = [
-    { metric: 'F1 Score', ...Object.fromEntries(trainingRuns.map(r => [r.model_type, r.metrics.f1_weighted])) },
-    { metric: 'Accuracy', ...Object.fromEntries(trainingRuns.map(r => [r.model_type, r.metrics.accuracy])) },
-    { metric: 'AUC-ROC',  ...Object.fromEntries(trainingRuns.map(r => [r.model_type, r.metrics.auc_roc])) },
+    { metric: 'F1 Score', ...Object.fromEntries(runs.map(r => [r.model_type, r.metrics.f1_weighted || 0])) },
+    { metric: 'Accuracy', ...Object.fromEntries(runs.map(r => [r.model_type, r.metrics.accuracy || 0])) },
+    { metric: 'AUC-ROC',  ...Object.fromEntries(runs.map(r => [r.model_type, r.metrics.auc_roc || 0])) },
   ]
-
-  const MODEL_COLORS = { XGBoost: 'var(--cyan)', SVM: 'var(--purple)', Evaluation: 'var(--amber)' }
 
   return (
     <div style={{ padding: 24 }}>
@@ -107,7 +50,7 @@ export default function ModelRegistry() {
       </div>
 
       {/* Production model banner */}
-      {winner && (
+      {winner && !loading && (
         <div style={{
           marginBottom: 20, padding: '16px 20px',
           background: 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(0,212,255,0.04))',
@@ -127,7 +70,7 @@ export default function ModelRegistry() {
               Production Model — {winner.model_type}
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2, fontFamily: 'var(--font-mono)' }}>
-              F1: {winner.metrics.f1_weighted?.toFixed(4)} · AUC-ROC: {winner.metrics.auc_roc?.toFixed(4)} · P95 Latency: {winner.metrics.latency_p95_ms?.toFixed(1)}ms
+              F1: {winner.metrics.f1_weighted?.toFixed(4)} · AUC-ROC: {winner.metrics.auc_roc?.toFixed(4)}
             </div>
           </div>
           <span className="badge badge-green">PRODUCTION</span>
@@ -141,6 +84,8 @@ export default function ModelRegistry() {
           <div className="label" style={{ marginBottom: 12 }}>Experiment Runs</div>
           {loading ? (
             <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>Loading from MLflow...</div>
+          ) : runs.length === 0 ? (
+             <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>No successful runs found.</div>
           ) : (
             runs.map(run => {
               const isSel = selected?.run_id === run.run_id
@@ -166,9 +111,9 @@ export default function ModelRegistry() {
                     {run.stage && (
                       <span style={{
                         fontSize: 9, padding: '2px 7px', borderRadius: 999,
-                        background: `${stageColor[run.stage]}22`,
-                        color: stageColor[run.stage],
-                        border: `1px solid ${stageColor[run.stage]}44`,
+                        background: `${stageColor[run.stage] || '#444'}22`,
+                        color: stageColor[run.stage] || '#fff',
+                        border: `1px solid ${stageColor[run.stage] || '#444'}44`,
                         letterSpacing: '0.1em',
                       }}>
                         {run.stage}
@@ -230,7 +175,7 @@ export default function ModelRegistry() {
           )}
 
           {/* Model comparison chart */}
-          {trainingRuns.length >= 2 && (
+          {runs.length >= 2 && (
             <div className="card">
               <div className="label" style={{ marginBottom: 14 }}>Model Comparison — XGBoost vs SVM</div>
               <ResponsiveContainer width="100%" height={200}>
@@ -241,46 +186,13 @@ export default function ModelRegistry() {
                     contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 4, fontSize: 11 }}
                     formatter={(v, name) => [v?.toFixed(4), name]}
                   />
-                  {trainingRuns.map(r => (
-                    <Bar key={r.model_type} dataKey={r.model_type} fill={MODEL_COLORS[r.model_type]} radius={[3,3,0,0]} />
+                  {runs.map(r => (
+                    <Bar key={r.run_id} dataKey={r.model_type} fill={MODEL_COLORS[r.model_type]} radius={[3,3,0,0]} />
                   ))}
                 </BarChart>
               </ResponsiveContainer>
-              <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
-                {trainingRuns.map(r => (
-                  <div key={r.model_type} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <div style={{ width: 10, height: 10, borderRadius: 2, background: MODEL_COLORS[r.model_type] }} />
-                    <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{r.model_type}</span>
-                    {r.stage === 'Production' && <span style={{ fontSize: 9, color: 'var(--green)' }}>★ Production</span>}
-                  </div>
-                ))}
-              </div>
             </div>
           )}
-
-          {/* Acceptance criteria */}
-          <div className="card">
-            <div className="label" style={{ marginBottom: 12 }}>Acceptance Criteria</div>
-            {winner && [
-              { label: 'F1 ≥ 0.85', pass: winner.metrics.f1_weighted >= 0.85, value: winner.metrics.f1_weighted?.toFixed(4) },
-              { label: 'AUC-ROC ≥ 0.90', pass: winner.metrics.auc_roc >= 0.90, value: winner.metrics.auc_roc?.toFixed(4) },
-              { label: 'Latency P95 ≤ 200ms', pass: winner.metrics.latency_p95_ms <= 200, value: `${winner.metrics.latency_p95_ms?.toFixed(1)}ms` },
-            ].map(({ label, pass, value }) => (
-              <div key={label} style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '8px 0', borderBottom: '1px solid var(--border)',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: pass ? 'var(--green)' : 'var(--red)' }} />
-                  <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{label}</span>
-                </div>
-                <span style={{
-                  fontSize: 12, fontFamily: 'var(--font-display)', fontWeight: 700,
-                  color: pass ? 'var(--green)' : 'var(--red)',
-                }}>{value}</span>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </div>

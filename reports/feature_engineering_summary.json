@@ -1,12 +1,12 @@
 {
-  "input_csv": "data/landmarks/landmarks.csv",
-  "output_features_csv": "data/features/features.csv",
-  "output_baseline_json": "data/features/baseline.json",
+  "input_csv": "/app/data/landmarks/landmarks.csv",
+  "output_features_csv": "/app/data/features/features.csv",
+  "output_baseline_json": "/app/data/features/baseline.json",
   "window_size": 30,
   "n_input_frames": 27807,
   "n_output_windows": 27783,
-  "elapsed_sec": 57.19,
-  "throughput_windows_per_sec": 485.8,
+  "elapsed_sec": 61.39,
+  "throughput_windows_per_sec": 452.6,
   "label_distribution": {
     "1": 13947,
     "0": 13836
