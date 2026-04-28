@@ -8,7 +8,7 @@ FROM python:3.11-slim AS builder
 
 WORKDIR /app
 
-# System libs needed to compile MediaPipe / OpenCV wheels
+# System libs needed
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
@@ -19,25 +19,33 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip first
 RUN pip install --upgrade pip
 
-# ── THE SAVE POINTS ──
+# Install OpenCV first (standard)
 RUN pip install --no-cache-dir --prefix=/install opencv-python-headless==4.9.0.80
 
-# 1. Install MediaPipe offline
-COPY mediapipe-0.10.11-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl .
-RUN pip install --no-cache-dir --no-deps --prefix=/install mediapipe-0.10.11-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+# ── THE HYBRID FIX ──
+# 1. Use wildcards so COPY doesn't fail if files are missing (GitHub Actions case)
+COPY mediapipe-*.whl* torch-*.whl* ./
 
-# 2. Install PyTorch offline
-COPY torch-2.11.0-cp311-cp311-manylinux_2_28_x86_64.whl .
-RUN pip install --no-cache-dir --no-deps --prefix=/install torch-2.11.0-cp311-cp311-manylinux_2_28_x86_64.whl
+# 2. Install MediaPipe: Local Wheel OR PyPI
+RUN if [ -f mediapipe-0.10.11-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl ]; then \
+        pip install --no-cache-dir --no-deps --prefix=/install mediapipe-0.10.11-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl; \
+    else \
+        pip install --no-cache-dir --prefix=/install mediapipe==0.10.11; \
+    fi
 
-# 3. Copy requirements and apply the Ghost Hack
+# 3. Install PyTorch: Local Wheel OR PyPI
+RUN if [ -f torch-2.11.0-cp311-cp311-manylinux_2_28_x86_64.whl ]; then \
+        pip install --no-cache-dir --no-deps --prefix=/install torch-2.11.0-cp311-cp311-manylinux_2_28_x86_64.whl; \
+    else \
+        pip install --no-cache-dir --prefix=/install torch==2.1.0; \
+    fi
+
+# 4. Handle remaining requirements
 COPY requirements.txt .
-RUN sed -i '/mediapipe/d' requirements.txt
-
-# 4. Install the remaining files
+# Remove mediapipe/torch from requirements if they exist to avoid double-install
+RUN sed -i '/mediapipe/d' requirements.txt && sed -i '/torch/d' requirements.txt
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 # ── Stage 2: Runtime ─────────────────────────────────────────
