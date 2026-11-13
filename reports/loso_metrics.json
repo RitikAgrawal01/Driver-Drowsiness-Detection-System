@@ -1,348 +1,347 @@
 {
   "rule__perclos_only": {
     "pooled": {
-      "precision": 0.6027,
-      "recall": 0.9081,
-      "f1": 0.7245,
-      "accuracy": 0.6602,
-      "specificity": 0.4201,
-      "roc_auc": 0.7586,
-      "pr_auc": 0.7837
+      "precision": 0.6184,
+      "recall": 0.9185,
+      "f1": 0.7391,
+      "accuracy": 0.6749,
+      "specificity": 0.43,
+      "roc_auc": 0.7747,
+      "pr_auc": 0.7877
     },
     "per_participant_mean": {
-      "precision": 0.6372,
-      "recall": 0.9094,
-      "f1": 0.7321,
-      "accuracy": 0.6567,
-      "roc_auc": 0.8112,
-      "pr_auc": 0.8157
+      "precision": 0.673,
+      "recall": 0.9162,
+      "f1": 0.753,
+      "accuracy": 0.6768,
+      "roc_auc": 0.8592,
+      "pr_auc": 0.8741
     },
     "per_participant_std": {
-      "precision": 0.1543,
-      "recall": 0.1017,
-      "f1": 0.099,
-      "accuracy": 0.1569,
-      "roc_auc": 0.198,
-      "pr_auc": 0.2056
+      "precision": 0.1899,
+      "recall": 0.1075,
+      "f1": 0.1094,
+      "accuracy": 0.1699,
+      "roc_auc": 0.2352,
+      "pr_auc": 0.2025
     },
-    "worst_participant_recall": 0.6982,
-    "video_level_correct": "18/24",
-    "video_level_accuracy": 0.75,
-    "n_windows": 6481,
+    "worst_participant_recall": 0.6421,
+    "video_level_correct": "35/48",
+    "video_level_accuracy": 0.7292,
+    "n_windows": 13258,
     "chosen_window_s": {
-      "60": 12
+      "60": 24
     }
   },
   "logreg__v1_9_fixed": {
     "pooled": {
-      "precision": 0.49,
-      "recall": 0.8071,
-      "f1": 0.6098,
-      "accuracy": 0.4917,
-      "specificity": 0.1862,
-      "roc_auc": 0.6797,
-      "pr_auc": 0.7296
+      "precision": 0.546,
+      "recall": 0.8503,
+      "f1": 0.665,
+      "accuracy": 0.5704,
+      "specificity": 0.2888,
+      "roc_auc": 0.6966,
+      "pr_auc": 0.7208
     },
     "per_participant_mean": {
-      "precision": 0.5373,
-      "recall": 0.8171,
-      "f1": 0.5838,
-      "accuracy": 0.4907,
-      "roc_auc": 0.7191,
-      "pr_auc": 0.7503
+      "precision": 0.5722,
+      "recall": 0.846,
+      "f1": 0.6456,
+      "accuracy": 0.5694,
+      "roc_auc": 0.7863,
+      "pr_auc": 0.828
     },
     "per_participant_std": {
-      "precision": 0.1702,
-      "recall": 0.2856,
-      "f1": 0.1621,
-      "accuracy": 0.1127,
-      "roc_auc": 0.2565,
-      "pr_auc": 0.2195
+      "precision": 0.2104,
+      "recall": 0.2612,
+      "f1": 0.1627,
+      "accuracy": 0.131,
+      "roc_auc": 0.2441,
+      "pr_auc": 0.1879
     },
-    "worst_participant_recall": 0.0772,
-    "video_level_correct": "12/24",
-    "video_level_accuracy": 0.5,
-    "n_windows": 6481,
+    "worst_participant_recall": 0.0,
+    "video_level_correct": "27/48",
+    "video_level_accuracy": 0.5625,
+    "n_windows": 13258,
     "chosen_window_s": {
-      "60": 12
+      "60": 24
     }
   },
   "logreg__v2_12": {
     "pooled": {
-      "precision": 0.4694,
-      "recall": 0.91,
-      "f1": 0.6193,
-      "accuracy": 0.4495,
-      "specificity": 0.0033,
-      "roc_auc": 0.6321,
-      "pr_auc": 0.6877
+      "precision": 0.5209,
+      "recall": 0.8446,
+      "f1": 0.6444,
+      "accuracy": 0.5326,
+      "specificity": 0.2188,
+      "roc_auc": 0.6928,
+      "pr_auc": 0.728
     },
     "per_participant_mean": {
-      "precision": 0.4623,
-      "recall": 0.9126,
-      "f1": 0.6117,
-      "accuracy": 0.4488,
-      "roc_auc": 0.6902,
-      "pr_auc": 0.7305
+      "precision": 0.5534,
+      "recall": 0.8384,
+      "f1": 0.6328,
+      "accuracy": 0.5355,
+      "roc_auc": 0.7371,
+      "pr_auc": 0.794
     },
     "per_participant_std": {
-      "precision": 0.0712,
-      "recall": 0.191,
-      "f1": 0.1051,
-      "accuracy": 0.0976,
-      "roc_auc": 0.2733,
-      "pr_auc": 0.2201
+      "precision": 0.1543,
+      "recall": 0.2417,
+      "f1": 0.1089,
+      "accuracy": 0.1054,
+      "roc_auc": 0.2541,
+      "pr_auc": 0.1984
     },
-    "worst_participant_recall": 0.3889,
-    "video_level_correct": "11/24",
-    "video_level_accuracy": 0.4583,
-    "n_windows": 6481,
+    "worst_participant_recall": 0.1691,
+    "video_level_correct": "26/48",
+    "video_level_accuracy": 0.5417,
+    "n_windows": 13258,
     "chosen_window_s": {
-      "60": 12
+      "60": 24
     }
   },
   "logreg__v2_12_no_pose": {
     "pooled": {
-      "precision": 0.5383,
-      "recall": 0.7981,
-      "f1": 0.6429,
-      "accuracy": 0.5638,
-      "specificity": 0.3369,
-      "roc_auc": 0.6805,
-      "pr_auc": 0.7348
+      "precision": 0.5849,
+      "recall": 0.8589,
+      "f1": 0.6959,
+      "accuracy": 0.6237,
+      "specificity": 0.3871,
+      "roc_auc": 0.7273,
+      "pr_auc": 0.761
     },
     "per_participant_mean": {
-      "precision": 0.6004,
-      "recall": 0.8081,
-      "f1": 0.6466,
-      "accuracy": 0.5611,
-      "roc_auc": 0.7439,
-      "pr_auc": 0.7667
+      "precision": 0.6299,
+      "recall": 0.8579,
+      "f1": 0.6974,
+      "accuracy": 0.6255,
+      "roc_auc": 0.7718,
+      "pr_auc": 0.8177
     },
     "per_participant_std": {
-      "precision": 0.2057,
-      "recall": 0.2045,
-      "f1": 0.1016,
-      "accuracy": 0.1526,
-      "roc_auc": 0.2372,
-      "pr_auc": 0.2215
+      "precision": 0.1776,
+      "recall": 0.2151,
+      "f1": 0.1437,
+      "accuracy": 0.1777,
+      "roc_auc": 0.2556,
+      "pr_auc": 0.1989
     },
-    "worst_participant_recall": 0.5018,
-    "video_level_correct": "16/24",
+    "worst_participant_recall": 0.3242,
+    "video_level_correct": "32/48",
     "video_level_accuracy": 0.6667,
-    "n_windows": 6481,
+    "n_windows": 13347,
     "chosen_window_s": {
-      "60": 12
+      "60": 22,
+      "15": 2
     }
   },
   "svm__v1_9_fixed": {
     "pooled": {
-      "precision": 0.5051,
-      "recall": 0.8495,
-      "f1": 0.6335,
-      "accuracy": 0.5164,
-      "specificity": 0.1938,
-      "roc_auc": 0.7293,
-      "pr_auc": 0.7699
+      "precision": 0.5343,
+      "recall": 0.8732,
+      "f1": 0.6629,
+      "accuracy": 0.5547,
+      "specificity": 0.2345,
+      "roc_auc": 0.6338,
+      "pr_auc": 0.6451
     },
     "per_participant_mean": {
-      "precision": 0.5144,
-      "recall": 0.853,
-      "f1": 0.6181,
-      "accuracy": 0.5193,
-      "roc_auc": 0.7765,
-      "pr_auc": 0.8179
+      "precision": 0.5748,
+      "recall": 0.8691,
+      "f1": 0.6581,
+      "accuracy": 0.5564,
+      "roc_auc": 0.6632,
+      "pr_auc": 0.7313
     },
     "per_participant_std": {
-      "precision": 0.1265,
-      "recall": 0.27,
-      "f1": 0.1431,
-      "accuracy": 0.1168,
-      "roc_auc": 0.2382,
-      "pr_auc": 0.1804
+      "precision": 0.1629,
+      "recall": 0.2007,
+      "f1": 0.0977,
+      "accuracy": 0.1323,
+      "roc_auc": 0.3343,
+      "pr_auc": 0.2398
     },
-    "worst_participant_recall": 0.1835,
-    "video_level_correct": "12/24",
-    "video_level_accuracy": 0.5,
-    "n_windows": 6481,
+    "worst_participant_recall": 0.3416,
+    "video_level_correct": "28/48",
+    "video_level_accuracy": 0.5833,
+    "n_windows": 13318,
     "chosen_window_s": {
-      "60": 12
+      "60": 22,
+      "30": 2
     }
   },
   "svm__v2_12": {
     "pooled": {
-      "precision": 0.4915,
-      "recall": 0.8674,
-      "f1": 0.6275,
-      "accuracy": 0.4932,
-      "specificity": 0.1306,
-      "roc_auc": 0.6938,
-      "pr_auc": 0.7383
+      "precision": 0.53,
+      "recall": 0.9251,
+      "f1": 0.6739,
+      "accuracy": 0.5511,
+      "specificity": 0.1749,
+      "roc_auc": 0.6244,
+      "pr_auc": 0.6218
     },
     "per_participant_mean": {
-      "precision": 0.5125,
-      "recall": 0.869,
-      "f1": 0.6181,
-      "accuracy": 0.4968,
-      "roc_auc": 0.7671,
-      "pr_auc": 0.8099
+      "precision": 0.5513,
+      "recall": 0.9226,
+      "f1": 0.6776,
+      "accuracy": 0.5556,
+      "roc_auc": 0.6377,
+      "pr_auc": 0.6989
     },
     "per_participant_std": {
-      "precision": 0.0897,
-      "recall": 0.2244,
-      "f1": 0.0995,
-      "accuracy": 0.102,
-      "roc_auc": 0.2622,
-      "pr_auc": 0.1869
+      "precision": 0.1004,
+      "recall": 0.1287,
+      "f1": 0.0634,
+      "accuracy": 0.1089,
+      "roc_auc": 0.3337,
+      "pr_auc": 0.2464
     },
-    "worst_participant_recall": 0.2561,
-    "video_level_correct": "13/24",
-    "video_level_accuracy": 0.5417,
-    "n_windows": 6511,
+    "worst_participant_recall": 0.5474,
+    "video_level_correct": "29/48",
+    "video_level_accuracy": 0.6042,
+    "n_windows": 13258,
     "chosen_window_s": {
-      "60": 11,
-      "30": 1
+      "60": 24
     }
   },
   "svm__v2_12_no_pose": {
     "pooled": {
-      "precision": 0.5816,
-      "recall": 0.8648,
-      "f1": 0.6955,
-      "accuracy": 0.6274,
-      "specificity": 0.3973,
-      "roc_auc": 0.6835,
-      "pr_auc": 0.7092
+      "precision": 0.5619,
+      "recall": 0.851,
+      "f1": 0.6769,
+      "accuracy": 0.5926,
+      "specificity": 0.3327,
+      "roc_auc": 0.7126,
+      "pr_auc": 0.712
     },
     "per_participant_mean": {
-      "precision": 0.6165,
-      "recall": 0.8644,
-      "f1": 0.7002,
-      "accuracy": 0.6261,
-      "roc_auc": 0.7568,
-      "pr_auc": 0.7775
+      "precision": 0.6063,
+      "recall": 0.8509,
+      "f1": 0.6749,
+      "accuracy": 0.5952,
+      "roc_auc": 0.7414,
+      "pr_auc": 0.7745
     },
     "per_participant_std": {
-      "precision": 0.1863,
-      "recall": 0.1689,
-      "f1": 0.1316,
-      "accuracy": 0.1699,
-      "roc_auc": 0.2127,
-      "pr_auc": 0.2006
+      "precision": 0.1805,
+      "recall": 0.2243,
+      "f1": 0.1432,
+      "accuracy": 0.174,
+      "roc_auc": 0.2604,
+      "pr_auc": 0.2021
     },
-    "worst_participant_recall": 0.4818,
-    "video_level_correct": "15/24",
-    "video_level_accuracy": 0.625,
-    "n_windows": 6481,
+    "worst_participant_recall": 0.2669,
+    "video_level_correct": "31/48",
+    "video_level_accuracy": 0.6458,
+    "n_windows": 13438,
     "chosen_window_s": {
-      "60": 12
+      "60": 18,
+      "30": 6
     }
   },
   "xgboost__v1_9_fixed": {
     "pooled": {
-      "precision": 0.5551,
-      "recall": 0.6717,
-      "f1": 0.6078,
-      "accuracy": 0.5734,
-      "specificity": 0.4782,
-      "roc_auc": 0.6568,
-      "pr_auc": 0.676
+      "precision": 0.61,
+      "recall": 0.8836,
+      "f1": 0.7217,
+      "accuracy": 0.6583,
+      "specificity": 0.4318,
+      "roc_auc": 0.7178,
+      "pr_auc": 0.6978
     },
     "per_participant_mean": {
-      "precision": 0.5278,
-      "recall": 0.6878,
-      "f1": 0.5739,
-      "accuracy": 0.5745,
-      "roc_auc": 0.661,
-      "pr_auc": 0.6948
+      "precision": 0.6648,
+      "recall": 0.8807,
+      "f1": 0.7307,
+      "accuracy": 0.6609,
+      "roc_auc": 0.7831,
+      "pr_auc": 0.8176
     },
     "per_participant_std": {
-      "precision": 0.2221,
-      "recall": 0.3243,
-      "f1": 0.2312,
-      "accuracy": 0.1606,
-      "roc_auc": 0.2515,
-      "pr_auc": 0.2031
+      "precision": 0.1929,
+      "recall": 0.1602,
+      "f1": 0.1236,
+      "accuracy": 0.1716,
+      "roc_auc": 0.2466,
+      "pr_auc": 0.1882
     },
-    "worst_participant_recall": 0.0,
-    "video_level_correct": "14/24",
-    "video_level_accuracy": 0.5833,
-    "n_windows": 6585,
+    "worst_participant_recall": 0.4579,
+    "video_level_correct": "33/48",
+    "video_level_accuracy": 0.6875,
+    "n_windows": 13258,
     "chosen_window_s": {
-      "60": 9,
-      "30": 2,
-      "15": 1
+      "60": 24
     }
   },
   "xgboost__v2_12": {
     "pooled": {
-      "precision": 0.5633,
-      "recall": 0.7251,
-      "f1": 0.634,
-      "accuracy": 0.588,
-      "specificity": 0.4551,
-      "roc_auc": 0.6811,
-      "pr_auc": 0.6779
+      "precision": 0.6014,
+      "recall": 0.8718,
+      "f1": 0.7118,
+      "accuracy": 0.646,
+      "specificity": 0.4189,
+      "roc_auc": 0.7451,
+      "pr_auc": 0.72
     },
     "per_participant_mean": {
-      "precision": 0.6045,
-      "recall": 0.7333,
-      "f1": 0.6096,
-      "accuracy": 0.5888,
-      "roc_auc": 0.6861,
-      "pr_auc": 0.7228
+      "precision": 0.6504,
+      "recall": 0.8713,
+      "f1": 0.7227,
+      "accuracy": 0.6483,
+      "roc_auc": 0.8185,
+      "pr_auc": 0.8446
     },
     "per_participant_std": {
-      "precision": 0.256,
-      "recall": 0.3147,
-      "f1": 0.213,
-      "accuracy": 0.1614,
-      "roc_auc": 0.2508,
-      "pr_auc": 0.2017
+      "precision": 0.1976,
+      "recall": 0.1657,
+      "f1": 0.1391,
+      "accuracy": 0.1877,
+      "roc_auc": 0.2121,
+      "pr_auc": 0.1764
     },
-    "worst_participant_recall": 0.0,
-    "video_level_correct": "14/24",
-    "video_level_accuracy": 0.5833,
-    "n_windows": 6585,
+    "worst_participant_recall": 0.4007,
+    "video_level_correct": "33/48",
+    "video_level_accuracy": 0.6875,
+    "n_windows": 13288,
     "chosen_window_s": {
-      "60": 9,
-      "30": 2,
-      "15": 1
+      "60": 23,
+      "30": 1
     }
   },
   "xgboost__v2_12_no_pose": {
     "pooled": {
-      "precision": 0.5537,
-      "recall": 0.8002,
-      "f1": 0.6545,
-      "accuracy": 0.5842,
-      "specificity": 0.375,
-      "roc_auc": 0.6624,
-      "pr_auc": 0.6573
+      "precision": 0.5993,
+      "recall": 0.8788,
+      "f1": 0.7127,
+      "accuracy": 0.6447,
+      "specificity": 0.4092,
+      "roc_auc": 0.7231,
+      "pr_auc": 0.7109
     },
     "per_participant_mean": {
-      "precision": 0.6164,
-      "recall": 0.8088,
-      "f1": 0.6514,
-      "accuracy": 0.5858,
-      "roc_auc": 0.7441,
-      "pr_auc": 0.7378
+      "precision": 0.6504,
+      "recall": 0.8766,
+      "f1": 0.7203,
+      "accuracy": 0.6466,
+      "roc_auc": 0.8271,
+      "pr_auc": 0.8473
     },
     "per_participant_std": {
-      "precision": 0.1779,
-      "recall": 0.2192,
-      "f1": 0.1102,
-      "accuracy": 0.1389,
-      "roc_auc": 0.1463,
-      "pr_auc": 0.1542
+      "precision": 0.1888,
+      "recall": 0.1645,
+      "f1": 0.1205,
+      "accuracy": 0.1669,
+      "roc_auc": 0.1812,
+      "pr_auc": 0.1573
     },
-    "worst_participant_recall": 0.2776,
-    "video_level_correct": "15/24",
-    "video_level_accuracy": 0.625,
-    "n_windows": 6511,
+    "worst_participant_recall": 0.46,
+    "video_level_correct": "32/48",
+    "video_level_accuracy": 0.6667,
+    "n_windows": 13348,
     "chosen_window_s": {
-      "60": 11,
-      "30": 1
+      "60": 21,
+      "30": 3
     }
   },
   "_meta": {
@@ -358,7 +357,19 @@
       9,
       10,
       11,
-      12
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24
     ]
   }
 }

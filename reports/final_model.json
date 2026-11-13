@@ -6,12 +6,12 @@
   "window_s": 60,
   "config": {},
   "n_estimators": null,
-  "threshold": 0.01913,
-  "selection_cv_auc": 0.8138,
-  "train_windows": 6481,
-  "mlflow_run_id": "8ac10dad91b4469594e448827988aafb",
+  "threshold": 0.020134,
+  "selection_cv_auc": 0.7945,
+  "train_windows": 13258,
+  "mlflow_run_id": "937099accb8e4704be57501908ae7958",
   "registered_model": "drowsiness_classifier_v2",
-  "version": 4,
+  "version": 5,
   "alias": "champion",
   "reported_performance": "nested LOSO (reports/loso_metrics.json)"
 }

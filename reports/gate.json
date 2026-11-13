@@ -1,20 +1,21 @@
 {
-  "ml_candidate": "svm__v2_12",
+  "ml_candidate": "xgboost__v2_12",
   "baseline_run": "rule__perclos_only",
   "ml_checks": {
     "beats_baseline": {
-      "candidate_pp_auc": 0.7671,
-      "baseline_pp_auc": 0.8112,
+      "candidate_pp_auc": 0.8185,
+      "baseline_pp_auc": 0.8592,
       "passed": false
     },
     "min_pooled_auc": {
-      "candidate_pooled_auc": 0.6938,
+      "candidate_pooled_auc": 0.7451,
       "required": 0.7,
-      "passed": false
+      "passed": true
     },
     "beats_champion": {
-      "champion_version": 3,
-      "champion_pp_auc": 0.8112,
+      "champion_version": 4,
+      "champion_family": "rule__perclos_only",
+      "champion_pp_auc_on_current_data": 0.8592,
       "required_gain": 0.0,
       "passed": false
     }
@@ -22,13 +23,13 @@
   "ml_gate_passed": false,
   "baseline_checks": {
     "min_pooled_auc": {
-      "baseline_pooled_auc": 0.7586,
+      "baseline_pooled_auc": 0.7747,
       "required": 0.7,
       "passed": true
     },
     "beats_champion": {
       "passed": true,
-      "note": "reproduces champion v3 exactly"
+      "note": "same model family as champion v4, re-trained on current data"
     }
   },
   "deploy": {
