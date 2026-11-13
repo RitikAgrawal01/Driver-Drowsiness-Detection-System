@@ -1,0 +1,516 @@
+{
+  "results": {
+    "rule (raw)": {
+      "pooled": {
+        "precision": 0.6027,
+        "recall": 0.9081,
+        "f1": 0.7245,
+        "accuracy": 0.6602,
+        "specificity": 0.4201,
+        "roc_auc": 0.7586,
+        "pr_auc": 0.7837
+      },
+      "per_participant_mean": {
+        "precision": 0.6372,
+        "recall": 0.9094,
+        "f1": 0.7321,
+        "accuracy": 0.6567,
+        "roc_auc": 0.8112,
+        "pr_auc": 0.8157
+      },
+      "per_participant_std": {
+        "precision": 0.1543,
+        "recall": 0.1017,
+        "f1": 0.099,
+        "accuracy": 0.1569,
+        "roc_auc": 0.198,
+        "pr_auc": 0.2056
+      },
+      "worst_participant_recall": 0.6982,
+      "video_level_correct": "18/24",
+      "video_level_accuracy": 0.75,
+      "n_windows": 6481,
+      "vs_rule_raw": {
+        "better_for_people": 0,
+        "mean_auc_diff": 0.0,
+        "wilcoxon_p": null,
+        "worst_person_auc": 0.433
+      }
+    },
+    "rule (centered)": {
+      "pooled": {
+        "precision": 0.7506,
+        "recall": 0.789,
+        "f1": 0.7693,
+        "accuracy": 0.7672,
+        "specificity": 0.7461,
+        "roc_auc": 0.8367,
+        "pr_auc": 0.855
+      },
+      "per_participant_mean": {
+        "precision": 0.7514,
+        "recall": 0.787,
+        "f1": 0.7671,
+        "accuracy": 0.7639,
+        "roc_auc": 0.8112,
+        "pr_auc": 0.8157
+      },
+      "per_participant_std": {
+        "precision": 0.1825,
+        "recall": 0.1787,
+        "f1": 0.1797,
+        "accuracy": 0.1813,
+        "roc_auc": 0.198,
+        "pr_auc": 0.2056
+      },
+      "worst_participant_recall": 0.4818,
+      "video_level_correct": "20/24",
+      "video_level_accuracy": 0.8333,
+      "n_windows": 6481,
+      "vs_rule_raw": {
+        "better_for_people": 0,
+        "mean_auc_diff": 0.0,
+        "wilcoxon_p": null,
+        "worst_person_auc": 0.433
+      }
+    },
+    "logreg (centered)": {
+      "pooled": {
+        "precision": 0.476,
+        "recall": 0.8439,
+        "f1": 0.6087,
+        "accuracy": 0.466,
+        "specificity": 0.0998,
+        "roc_auc": 0.678,
+        "pr_auc": 0.7275
+      },
+      "per_participant_mean": {
+        "precision": 0.4701,
+        "recall": 0.8457,
+        "f1": 0.5985,
+        "accuracy": 0.4684,
+        "roc_auc": 0.6878,
+        "pr_auc": 0.7273
+      },
+      "per_participant_std": {
+        "precision": 0.0769,
+        "recall": 0.2288,
+        "f1": 0.1157,
+        "accuracy": 0.0996,
+        "roc_auc": 0.2367,
+        "pr_auc": 0.205
+      },
+      "worst_participant_recall": 0.3088,
+      "video_level_correct": "11/24",
+      "video_level_accuracy": 0.4583,
+      "n_windows": 6511,
+      "vs_rule_raw": {
+        "better_for_people": 3,
+        "mean_auc_diff": -0.1234,
+        "wilcoxon_p": 0.1475,
+        "worst_person_auc": 0.249
+      }
+    },
+    "logreg (centered, no pose)": {
+      "pooled": {
+        "precision": 0.6718,
+        "recall": 0.7344,
+        "f1": 0.7017,
+        "accuracy": 0.6928,
+        "specificity": 0.6525,
+        "roc_auc": 0.7699,
+        "pr_auc": 0.7874
+      },
+      "per_participant_mean": {
+        "precision": 0.663,
+        "recall": 0.7383,
+        "f1": 0.6965,
+        "accuracy": 0.6931,
+        "roc_auc": 0.74,
+        "pr_auc": 0.7567
+      },
+      "per_participant_std": {
+        "precision": 0.1978,
+        "recall": 0.2479,
+        "f1": 0.2188,
+        "accuracy": 0.2148,
+        "roc_auc": 0.2466,
+        "pr_auc": 0.2332
+      },
+      "worst_participant_recall": 0.2376,
+      "video_level_correct": "20/24",
+      "video_level_accuracy": 0.8333,
+      "n_windows": 6481,
+      "vs_rule_raw": {
+        "better_for_people": 2,
+        "mean_auc_diff": -0.0711,
+        "wilcoxon_p": 0.084,
+        "worst_person_auc": 0.234
+      }
+    },
+    "svm (centered)": {
+      "pooled": {
+        "precision": 0.6138,
+        "recall": 0.8571,
+        "f1": 0.7153,
+        "accuracy": 0.6643,
+        "specificity": 0.4774,
+        "roc_auc": 0.7493,
+        "pr_auc": 0.7054
+      },
+      "per_participant_mean": {
+        "precision": 0.6246,
+        "recall": 0.8597,
+        "f1": 0.7163,
+        "accuracy": 0.6613,
+        "roc_auc": 0.7231,
+        "pr_auc": 0.712
+      },
+      "per_participant_std": {
+        "precision": 0.1425,
+        "recall": 0.1488,
+        "f1": 0.1311,
+        "accuracy": 0.1537,
+        "roc_auc": 0.2028,
+        "pr_auc": 0.2203
+      },
+      "worst_participant_recall": 0.4722,
+      "video_level_correct": "15/24",
+      "video_level_accuracy": 0.625,
+      "n_windows": 6541,
+      "vs_rule_raw": {
+        "better_for_people": 4,
+        "mean_auc_diff": -0.0881,
+        "wilcoxon_p": 0.4922,
+        "worst_person_auc": 0.36
+      }
+    },
+    "svm (centered, no pose)": {
+      "pooled": {
+        "precision": 0.6598,
+        "recall": 0.7808,
+        "f1": 0.7152,
+        "accuracy": 0.694,
+        "specificity": 0.61,
+        "roc_auc": 0.7942,
+        "pr_auc": 0.8102
+      },
+      "per_participant_mean": {
+        "precision": 0.6726,
+        "recall": 0.7849,
+        "f1": 0.7179,
+        "accuracy": 0.6926,
+        "roc_auc": 0.7629,
+        "pr_auc": 0.7855
+      },
+      "per_participant_std": {
+        "precision": 0.2003,
+        "recall": 0.2042,
+        "f1": 0.1925,
+        "accuracy": 0.2069,
+        "roc_auc": 0.2363,
+        "pr_auc": 0.2181
+      },
+      "worst_participant_recall": 0.3696,
+      "video_level_correct": "19/24",
+      "video_level_accuracy": 0.7917,
+      "n_windows": 6481,
+      "vs_rule_raw": {
+        "better_for_people": 3,
+        "mean_auc_diff": -0.0483,
+        "wilcoxon_p": 0.2754,
+        "worst_person_auc": 0.246
+      }
+    },
+    "xgb monotonic (raw)": {
+      "pooled": {
+        "precision": 0.5397,
+        "recall": 0.7566,
+        "f1": 0.63,
+        "accuracy": 0.5627,
+        "specificity": 0.375,
+        "roc_auc": 0.6779,
+        "pr_auc": 0.6652
+      },
+      "per_participant_mean": {
+        "precision": 0.5649,
+        "recall": 0.7681,
+        "f1": 0.6058,
+        "accuracy": 0.5593,
+        "roc_auc": 0.6953,
+        "pr_auc": 0.7272
+      },
+      "per_participant_std": {
+        "precision": 0.2423,
+        "recall": 0.3048,
+        "f1": 0.1919,
+        "accuracy": 0.1397,
+        "roc_auc": 0.2574,
+        "pr_auc": 0.2144
+      },
+      "worst_participant_recall": 0.0108,
+      "video_level_correct": "13/24",
+      "video_level_accuracy": 0.5417,
+      "n_windows": 6511,
+      "vs_rule_raw": {
+        "better_for_people": 4,
+        "mean_auc_diff": -0.1159,
+        "wilcoxon_p": 0.3652,
+        "worst_person_auc": 0.165
+      }
+    },
+    "xgb monotonic (raw, no pose)": {
+      "pooled": {
+        "precision": 0.5848,
+        "recall": 0.7297,
+        "f1": 0.6493,
+        "accuracy": 0.6121,
+        "specificity": 0.4982,
+        "roc_auc": 0.7107,
+        "pr_auc": 0.6958
+      },
+      "per_participant_mean": {
+        "precision": 0.6715,
+        "recall": 0.7322,
+        "f1": 0.6478,
+        "accuracy": 0.6142,
+        "roc_auc": 0.7822,
+        "pr_auc": 0.8067
+      },
+      "per_participant_std": {
+        "precision": 0.1959,
+        "recall": 0.2132,
+        "f1": 0.073,
+        "accuracy": 0.1211,
+        "roc_auc": 0.1476,
+        "pr_auc": 0.1393
+      },
+      "worst_participant_recall": 0.3808,
+      "video_level_correct": "15/24",
+      "video_level_accuracy": 0.625,
+      "n_windows": 6481,
+      "vs_rule_raw": {
+        "better_for_people": 4,
+        "mean_auc_diff": -0.029,
+        "wilcoxon_p": 0.3203,
+        "worst_person_auc": 0.485
+      }
+    },
+    "xgb monotonic (centered)": {
+      "pooled": {
+        "precision": 0.6878,
+        "recall": 0.7664,
+        "f1": 0.7249,
+        "accuracy": 0.7138,
+        "specificity": 0.6629,
+        "roc_auc": 0.7523,
+        "pr_auc": 0.7192
+      },
+      "per_participant_mean": {
+        "precision": 0.7016,
+        "recall": 0.7658,
+        "f1": 0.7216,
+        "accuracy": 0.7119,
+        "roc_auc": 0.7633,
+        "pr_auc": 0.7675
+      },
+      "per_participant_std": {
+        "precision": 0.1857,
+        "recall": 0.2085,
+        "f1": 0.1895,
+        "accuracy": 0.1893,
+        "roc_auc": 0.1935,
+        "pr_auc": 0.1962
+      },
+      "worst_participant_recall": 0.3299,
+      "video_level_correct": "19/24",
+      "video_level_accuracy": 0.7917,
+      "n_windows": 6541,
+      "vs_rule_raw": {
+        "better_for_people": 5,
+        "mean_auc_diff": -0.0479,
+        "wilcoxon_p": 0.5566,
+        "worst_person_auc": 0.452
+      }
+    },
+    "xgb monotonic (centered, no pose)": {
+      "pooled": {
+        "precision": 0.7184,
+        "recall": 0.7808,
+        "f1": 0.7483,
+        "accuracy": 0.7416,
+        "specificity": 0.7035,
+        "roc_auc": 0.811,
+        "pr_auc": 0.7851
+      },
+      "per_participant_mean": {
+        "precision": 0.7299,
+        "recall": 0.7847,
+        "f1": 0.7525,
+        "accuracy": 0.7414,
+        "roc_auc": 0.7949,
+        "pr_auc": 0.8067
+      },
+      "per_participant_std": {
+        "precision": 0.1737,
+        "recall": 0.1613,
+        "f1": 0.1623,
+        "accuracy": 0.1718,
+        "roc_auc": 0.1659,
+        "pr_auc": 0.1667
+      },
+      "worst_participant_recall": 0.4983,
+      "video_level_correct": "20/24",
+      "video_level_accuracy": 0.8333,
+      "n_windows": 6481,
+      "vs_rule_raw": {
+        "better_for_people": 4,
+        "mean_auc_diff": -0.0163,
+        "wilcoxon_p": 0.7344,
+        "worst_person_auc": 0.494
+      }
+    }
+  },
+  "per_person_auc": {
+    "rule (raw)": {
+      "1": 0.65,
+      "2": 0.893,
+      "3": 1.0,
+      "4": 0.868,
+      "5": 0.827,
+      "6": 0.433,
+      "7": 0.948,
+      "8": 0.997,
+      "9": 0.48,
+      "10": 0.65,
+      "11": 0.988,
+      "12": 1.0
+    },
+    "rule (centered)": {
+      "1": 0.65,
+      "2": 0.893,
+      "3": 1.0,
+      "4": 0.868,
+      "5": 0.827,
+      "6": 0.433,
+      "7": 0.948,
+      "8": 0.997,
+      "9": 0.48,
+      "10": 0.65,
+      "11": 0.988,
+      "12": 1.0
+    },
+    "logreg (centered)": {
+      "1": 0.75,
+      "2": 0.815,
+      "3": 0.933,
+      "4": 0.419,
+      "5": 0.765,
+      "6": 0.588,
+      "7": 0.803,
+      "8": 0.249,
+      "9": 0.422,
+      "10": 0.509,
+      "11": 1.0,
+      "12": 1.0
+    },
+    "logreg (centered, no pose)": {
+      "1": 0.595,
+      "2": 0.771,
+      "3": 1.0,
+      "4": 0.483,
+      "5": 0.768,
+      "6": 0.525,
+      "7": 0.943,
+      "8": 0.994,
+      "9": 0.234,
+      "10": 0.567,
+      "11": 1.0,
+      "12": 1.0
+    },
+    "svm (centered)": {
+      "1": 0.812,
+      "2": 0.454,
+      "3": 1.0,
+      "4": 0.56,
+      "5": 0.713,
+      "6": 0.62,
+      "7": 0.807,
+      "8": 0.36,
+      "9": 0.709,
+      "10": 0.643,
+      "11": 1.0,
+      "12": 1.0
+    },
+    "svm (centered, no pose)": {
+      "1": 0.618,
+      "2": 0.783,
+      "3": 1.0,
+      "4": 0.511,
+      "5": 0.799,
+      "6": 0.491,
+      "7": 0.945,
+      "8": 0.962,
+      "9": 0.246,
+      "10": 0.8,
+      "11": 1.0,
+      "12": 1.0
+    },
+    "xgb monotonic (raw)": {
+      "1": 0.733,
+      "2": 0.821,
+      "3": 0.965,
+      "4": 0.23,
+      "5": 0.699,
+      "6": 0.709,
+      "7": 0.164,
+      "8": 0.823,
+      "9": 0.538,
+      "10": 0.698,
+      "11": 0.964,
+      "12": 1.0
+    },
+    "xgb monotonic (raw, no pose)": {
+      "1": 0.639,
+      "2": 0.834,
+      "3": 0.874,
+      "4": 0.919,
+      "5": 0.783,
+      "6": 0.821,
+      "7": 0.609,
+      "8": 0.787,
+      "9": 0.485,
+      "10": 0.673,
+      "11": 0.962,
+      "12": 1.0
+    },
+    "xgb monotonic (centered)": {
+      "1": 0.759,
+      "2": 0.637,
+      "3": 1.0,
+      "4": 0.809,
+      "5": 0.891,
+      "6": 0.452,
+      "7": 0.919,
+      "8": 0.586,
+      "9": 0.499,
+      "10": 0.606,
+      "11": 1.0,
+      "12": 1.0
+    },
+    "xgb monotonic (centered, no pose)": {
+      "1": 0.736,
+      "2": 0.882,
+      "3": 1.0,
+      "4": 0.768,
+      "5": 0.827,
+      "6": 0.655,
+      "7": 0.926,
+      "8": 0.683,
+      "9": 0.494,
+      "10": 0.568,
+      "11": 1.0,
+      "12": 1.0
+    }
+  }
+}

@@ -82,6 +82,14 @@ slo:                        # service-level objectives -> monitoring/prometheus/
 retrain:
   cooldown_hours: 6         # webhook ignores repeat drift triggers within this window
 
+exploratory:                # analysis/calibration_experiment.py (Fold 1 only, NOT a final test)
+  monotone:                 # +1: feature can only raise the drowsiness score, -1: only lower it
+    perclos: 1
+    blink_dur_mean_s: 1
+    long_closure_rate_pm: 1
+    ear_mean: -1
+    ear_min: -1
+
 leaky_reference:            # analysis/dvc.yaml: random split vs LOSO with v1 settings
   window_length_s: 15
   test_size: 0.2

@@ -35,3 +35,76 @@ stages:
       hash: md5
       md5: 8213ca2baf19f9ec0c331ce3be654e5c
       size: 945
+  calibration_experiment:
+    cmd: python -m analysis.calibration_experiment
+    deps:
+    - path: analysis/calibration_experiment.py
+      hash: md5
+      md5: 79244d09f63c44248d55e651f5626f99
+      size: 9989
+    - path: data/windows.parquet
+      hash: md5
+      md5: 704f23a92cb915cea345f668c0631d72
+      size: 1396742
+    - path: ddd_core/windows.py
+      hash: md5
+      md5: de7725a9da62c96c12fe317d9e6c02ee
+      size: 3613
+    - path: pipeline/evaluation.py
+      hash: md5
+      md5: c1bafa40c782e6af9bb64cd7ffd713e3
+      size: 3998
+    - path: pipeline/models.py
+      hash: md5
+      md5: 33c4ccd7e6fe09100f435faf6736cb43
+      size: 4673
+    params:
+      params.yaml:
+        cv:
+          inner_splits: 4
+          n_jobs: 4
+        exploratory:
+          monotone:
+            perclos: 1
+            blink_dur_mean_s: 1
+            long_closure_rate_pm: 1
+            ear_mean: -1
+            ear_min: -1
+        models:
+          logreg:
+            C:
+            - 0.01
+            - 0.1
+            - 1.0
+            - 10.0
+          svm:
+            C:
+            - 0.1
+            - 1.0
+            - 10.0
+            gamma:
+            - 0.03
+            - 0.1
+            - 0.3
+          xgboost:
+            max_depth:
+            - 2
+            - 4
+            - 6
+            min_child_weight:
+            - 1
+            - 10
+            learning_rate: 0.05
+            subsample: 0.8
+            colsample_bytree: 0.8
+            max_estimators: 2000
+            early_stopping_rounds: 50
+    outs:
+    - path: reports/EXPLORATORY_CALIBRATION.md
+      hash: md5
+      md5: a1e4f690abaceeb9d1f9dba4497d68ab
+      size: 2941
+    - path: reports/exploratory_calibration.json
+      hash: md5
+      md5: ec283ca2172b0cd2df9713c52493769a
+      size: 12025

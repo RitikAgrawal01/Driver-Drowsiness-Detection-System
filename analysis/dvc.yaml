@@ -16,3 +16,24 @@ stages:
     metrics:
     - reports/leaky_vs_loso.json:
         cache: false
+
+  calibration_experiment:
+    wdir: ..
+    cmd: python -m analysis.calibration_experiment
+    desc: 'EXPLORATORY (Fold 1 only): per-driver centering + monotonic XGBoost vs the PERCLOS rule'
+    deps:
+    - data/windows.parquet
+    - analysis/calibration_experiment.py
+    - pipeline/evaluation.py
+    - pipeline/models.py
+    - ddd_core/windows.py
+    params:
+    - exploratory
+    - models
+    - cv
+    outs:
+    - reports/EXPLORATORY_CALIBRATION.md:
+        cache: false
+    metrics:
+    - reports/exploratory_calibration.json:
+        cache: false
