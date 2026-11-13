@@ -2,18 +2,29 @@
 Stage 2: per-frame EAR, MAR and head pose, using ddd_core.geometry.frame_features —
 the exact function the live backend calls.
 
+Reads the folds listed in params.yaml -> data.folds (never the sealed test fold).
 Output: data/frame_features.parquet (no-face frames kept with face=0 and NaN features)
 """
 
 import pandas as pd
 
 from ddd_core.geometry import USED_LANDMARKS, frame_features
-from pipeline.dataset import FRAME_FEATURES, LANDMARKS_DIR
+from pipeline.dataset import FRAME_FEATURES, LANDMARKS_DIR, active_folds
+
+
+def landmark_files() -> list:
+    files = []
+    for fold in active_folds():
+        found = sorted((LANDMARKS_DIR / f"fold{fold}").glob("*.csv"))
+        if not found:
+            raise RuntimeError(f"no landmarks for fold {fold}; run `dvc repro extract_landmarks@{fold}`")
+        files += [(fold, f) for f in found]
+    return files
 
 
 def main():
     parts = []
-    for f in sorted(LANDMARKS_DIR.glob("*.csv")):
+    for fold, f in landmark_files():
         df = pd.read_csv(f)
         feats = []
         for r in df.itertuples(index=False):
@@ -23,6 +34,7 @@ def main():
         out = pd.concat(
             [df[["video", "participant", "label", "t"]].reset_index(drop=True), pd.DataFrame(feats)], axis=1
         )
+        out.insert(0, "fold", fold)
         parts.append(out)
         print(
             f"{f.stem:>9}: {len(out)} frames, median EAR {out['ear'].median():.3f}, "

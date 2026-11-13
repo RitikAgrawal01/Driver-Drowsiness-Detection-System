@@ -7,8 +7,12 @@
 # CI checks that dvc.lock was produced with exactly these values (scripts/check_params_lock.py).
 # ─────────────────────────────────────────────────────────────────────────────
 
+data:
+  folds: [1, 2]             # UTA-RLDD folds used for training + LOSO evaluation (raw in data/raw/fold<N>)
+  sealed_test_fold: 4       # final test only: refused by every stage until then
+
 extract:
-  target_fps: 10            # frames per second sampled from each video (by timestamp)
+  target_fps: 10           # frames per second sampled from each video (by timestamp)
   max_side: 960             # downscale so the longer side is at most this (pixels)
   apply_rotation: true      # apply the video's rotation metadata (10 of 24 videos are rotated)
   min_detection_confidence: 0.5

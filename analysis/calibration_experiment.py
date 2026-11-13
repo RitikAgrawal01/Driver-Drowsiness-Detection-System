@@ -1,8 +1,9 @@
 """
 EXPLORATORY: can per-driver normalisation and monotonic constraints make ML beat the PERCLOS rule?
 
-Fold 1's 12 participants have already been looked at many times, so these results are for
-choosing what to try on new folds, NOT a clean final test.
+These variants were designed after looking at Fold 1, so Fold 1 results are hints only. People
+from later folds (reported separately) had never been examined: they are the first honest check.
+Neither is the final test — that is the sealed fold.
 
 Ideas tested (same nested leave-one-participant-out protocol as pipeline/train_evaluate.py):
   * centering: every feature minus the driver's own median over all of their windows (no labels).
@@ -167,46 +168,68 @@ def main():
         delayed(outer)(n, m, f, bl, p, mp, mono, cv["inner_splits"]) for n, m, f, bl, p in tasks
     )
     preds = pd.concat(parts, ignore_index=True)
+    fold_of = raw.groupby("participant")["fold"].first()
+    preds["fold"] = preds["participant"].map(fold_of)
 
-    results, per_person = {}, {}
-    for name, *_ in variants:
-        summary, pp = summarize(preds[preds["run"] == name])
-        results[name] = summary
-        per_person[name] = pp.set_index("participant")["roc_auc"]
-    base = per_person["rule (raw)"]
-    for name in results:
-        diff = per_person[name] - base
-        nonzero = diff[diff.abs() > 1e-12]
-        results[name]["vs_rule_raw"] = {
-            "better_for_people": int((diff > 1e-12).sum()),
-            "mean_auc_diff": round(float(diff.mean()), 4),
-            "wilcoxon_p": round(float(wilcoxon(nonzero).pvalue), 4) if len(nonzero) >= 5 else None,
-            "worst_person_auc": round(float(per_person[name].min()), 3),
-        }
-    pp_table = pd.DataFrame(per_person).round(3)
-    save_json({"results": results, "per_person_auc": pp_table.to_dict()}, REPORTS_DIR / "exploratory_calibration.json")
-    write_md(results, pp_table)
+    groups = {
+        "new folds (never examined before)": preds[preds["fold"] != 1],
+        "fold 1 (already examined many times)": preds[preds["fold"] == 1],
+        "all participants": preds,
+    }
+    out, tables = {}, {}
+    for group, gp in groups.items():
+        if gp.empty:
+            continue
+        results, per_person = {}, {}
+        for name, *_ in variants:
+            summary, pp = summarize(gp[gp["run"] == name])
+            results[name] = summary
+            per_person[name] = pp.set_index("participant")["roc_auc"]
+        base = per_person["rule (raw)"]
+        for name in results:
+            diff = per_person[name] - base
+            nonzero = diff[diff.abs() > 1e-12]
+            results[name]["vs_rule_raw"] = {
+                "better_for_people": f"{int((diff > 1e-12).sum())}/{len(diff)}",
+                "mean_auc_diff": round(float(diff.mean()), 4),
+                "wilcoxon_p": round(float(wilcoxon(nonzero).pvalue), 4) if len(nonzero) >= 5 else None,
+                "worst_person_auc": round(float(per_person[name].min()), 3),
+            }
+        out[group] = results
+        tables[group] = pd.DataFrame(per_person).round(3)
+    save_json(
+        {"results": out, "per_person_auc": {g: t.to_dict() for g, t in tables.items()}},
+        REPORTS_DIR / "exploratory_calibration.json",
+    )
+    write_md(out, tables)
 
 
-def write_md(results: dict, pp: pd.DataFrame):
+def write_md(out: dict, tables: dict):
     L = [
-        "# EXPLORATORY: per-driver centering + monotonic XGBoost (Fold 1 only)",
+        "# EXPLORATORY: per-driver centering + monotonic XGBoost",
         "",
-        "Fold 1 has been examined many times, so treat these numbers as hints for what to test on new folds,",
-        "not as final results. Protocol: nested leave-one-participant-out, as in the main pipeline.",
+        "The variants were designed after looking at Fold 1, so Fold 1 numbers are hints only. People from",
+        "later folds had never been examined: their table is the first honest check of these ideas.",
+        "Protocol: nested leave-one-participant-out over all participants, as in the main pipeline.",
         "Centering = feature minus the driver's own median over all their windows (no labels).",
-        "",
-        "| Variant | ROC-AUC / person | Pooled ROC-AUC | Pooled F1 | Precision | Recall | Specificity | Better than "
-        "rule for | Mean diff | Wilcoxon p | Worst person |",
-        "|---|---|---|---|---|---|---|---|---|---|---|",
     ]
-    for name, r in results.items():
-        p, mu, sd, v = r["pooled"], r["per_participant_mean"], r["per_participant_std"], r["vs_rule_raw"]
-        L.append(
-            f"| {name} | {mu['roc_auc']:.3f} ± {sd['roc_auc']:.3f} | {p['roc_auc']:.3f} | {p['f1']:.3f} | "
-            f"{p['precision']:.3f} | {p['recall']:.3f} | {p['specificity']:.3f} | {v['better_for_people']}/12 | "
-            f"{v['mean_auc_diff']:+.3f} | {v['wilcoxon_p']} | {v['worst_person_auc']:.2f} |"
-        )
+    for group, results in out.items():
+        L += [
+            "",
+            f"## {group}",
+            "",
+            "| Variant | ROC-AUC / person | Pooled ROC-AUC | Pooled F1 | Precision | Recall | Specificity | "
+            "Better than rule for | Mean diff | Wilcoxon p | Worst person |",
+            "|---|---|---|---|---|---|---|---|---|---|---|",
+        ]
+        for name, r in results.items():
+            p, mu, sd, v = r["pooled"], r["per_participant_mean"], r["per_participant_std"], r["vs_rule_raw"]
+            L.append(
+                f"| {name} | {mu['roc_auc']:.3f} ± {sd['roc_auc']:.3f} | {p['roc_auc']:.3f} | {p['f1']:.3f} | "
+                f"{p['precision']:.3f} | {p['recall']:.3f} | {p['specificity']:.3f} | {v['better_for_people']} | "
+                f"{v['mean_auc_diff']:+.3f} | {v['wilcoxon_p']} | {v['worst_person_auc']:.2f} |"
+            )
+    pp = tables["all participants"]
     cols = list(pp.columns)
     L += [
         "",

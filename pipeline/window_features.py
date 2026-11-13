@@ -41,6 +41,7 @@ def main():
                 else:
                     w.update(
                         video=video,
+                        fold=int(v["fold"].iloc[0]),
                         participant=int(v["participant"].iloc[0]),
                         label=int(v["label"].iloc[0]),
                         window_s=int(length),
@@ -51,7 +52,8 @@ def main():
                 s += cfg["stride_s"]
         summary["per_window_length"][str(length)] = {"windows": kept, "dropped_low_face": dropped}
 
-    df = pd.DataFrame(out)[["video", "participant", "label", "window_s", "start_s", "face_ratio"] + ALL_FEATURES]
+    cols = ["video", "fold", "participant", "label", "window_s", "start_s", "face_ratio"] + ALL_FEATURES
+    df = pd.DataFrame(out)[cols]
     df.to_parquet(WINDOWS, index=False)
 
     counts = df.groupby(["window_s", "participant", "label"]).size().unstack("label", fill_value=0)

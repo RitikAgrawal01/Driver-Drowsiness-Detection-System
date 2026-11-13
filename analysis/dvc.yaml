@@ -20,7 +20,7 @@ stages:
   calibration_experiment:
     wdir: ..
     cmd: python -m analysis.calibration_experiment
-    desc: 'EXPLORATORY (Fold 1 only): per-driver centering + monotonic XGBoost vs the PERCLOS rule'
+    desc: 'EXPLORATORY: per-driver centering + monotonic XGBoost vs the PERCLOS rule (new folds reported apart)'
     deps:
     - data/windows.parquet
     - analysis/calibration_experiment.py

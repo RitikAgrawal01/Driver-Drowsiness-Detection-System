@@ -41,7 +41,9 @@ def fingerprint(path: Path, chunk: int = 8 << 20) -> str:
 
 def validate_raw_videos(raw_dir: Path) -> dict:
     """Names, pairing (alertN + drowsyN per participant) and duplicate content (v1 had drowsy8 == alert8)."""
-    files = sorted(p for p in raw_dir.glob("*/*") if p.is_file() and not p.name.startswith("."))
+    # data/raw/fold<N>/{alert,drowsy}/... (per-fold layout); duplicates are checked across ALL folds
+    pattern = "fold*/*/*" if any(raw_dir.glob("fold*")) else "*/*"
+    files = sorted(p for p in raw_dir.glob(pattern) if p.is_file() and not p.name.startswith("."))
     problems, pairs, prints = [], defaultdict(set), defaultdict(list)
     for p in files:
         m = VIDEO_RE.fullmatch(p.name)

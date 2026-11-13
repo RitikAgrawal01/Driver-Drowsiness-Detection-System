@@ -20,8 +20,9 @@ from tests.conftest import face_points
 PARTICIPANTS, SECONDS, FPS = 6, 40, 10
 
 
-def write_landmarks(dirpath, rng):
-    for p in range(1, PARTICIPANTS + 1):
+def write_landmarks(dirpath, rng, participants):
+    dirpath.mkdir(parents=True, exist_ok=True)
+    for p in participants:
         for label in (0, 1):
             closed_prob = 0.25 if label else 0.03  # drowsy videos close the eyes far more often
             rows = []
@@ -66,11 +67,16 @@ def mini_pipeline(tmp_path, monkeypatch, params):
         },
     }
     p["mlflow"] = {"experiment": "test_exp", "model_name": "test_model", "alias": "champion"}
+    p["data"] = {"folds": [1, 2], "sealed_test_fold": 4}
+
+    import pipeline.dataset as ds
 
     data, reports = tmp_path / "data", tmp_path / "reports"
-    (data / "landmarks").mkdir(parents=True)
-    reports.mkdir()
-    write_landmarks(data / "landmarks", np.random.default_rng(0))
+    reports.mkdir(parents=True)
+    rng = np.random.default_rng(0)
+    write_landmarks(data / "landmarks" / "fold1", rng, range(1, 4))  # two folds, as in the real layout
+    write_landmarks(data / "landmarks" / "fold2", rng, range(4, PARTICIPANTS + 1))
+    monkeypatch.setattr(ds, "load_params", lambda: p)
     paths = {
         "LANDMARKS_DIR": data / "landmarks",
         "FRAME_FEATURES": data / "frames.parquet",

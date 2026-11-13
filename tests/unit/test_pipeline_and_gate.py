@@ -122,9 +122,24 @@ def test_gate_fails_closed_when_mlflow_is_unreachable(tmp_path, monkeypatch):
     assert code == 1 and not g["passed"]  # v1 treated "MLflow down" as prod F1 = 0 and promoted
 
 
-def test_gate_requires_beating_the_current_champion(tmp_path, monkeypatch):
-    def champ(name, alias):
-        return {"status": "ok", "version": 5, "pp_auc": 0.9, "loso_md5": "x", "run_key": "svm__v2_12"}
+def champion(run_key, stored_auc=0.9):
+    return lambda name, alias: {"status": "ok", "version": 5, "pp_auc": stored_auc, "run_key": run_key}
 
-    code, g = run_gate(tmp_path, monkeypatch, ml_auc=0.85, rule_auc=0.8, champ=champ)
-    assert code == 1 and not g["ml_checks"]["beats_champion"]["passed"]
+
+def test_gate_compares_with_the_champion_rescored_on_current_data(tmp_path, monkeypatch):
+    """Champion family = svm no-pose; in THIS run it scores 0.99, so the candidate (0.85) loses."""
+    code, g = run_gate(tmp_path, monkeypatch, ml_auc=0.85, rule_auc=0.8, champ=champion("svm__v2_12_no_pose", 0.5))
+    check = g["ml_checks"]["beats_champion"]
+    assert not check["passed"] and check["champion_pp_auc_on_current_data"] == 0.99  # not the stored 0.5
+
+
+def test_gate_ignores_a_stale_stored_score_from_smaller_data(tmp_path, monkeypatch):
+    """The rule was champion with 0.81 on 12 people; on more people the rule scores 0.75. Same family -> ok."""
+    code, g = run_gate(tmp_path, monkeypatch, ml_auc=0.7, rule_auc=0.75, champ=champion("rule__perclos_only", 0.81))
+    assert code == 0 and g["deploy"]["model"] == "rule"
+    assert "re-trained" in g["baseline_checks"]["beats_champion"]["note"]
+
+
+def test_gate_falls_back_to_stored_score_when_champion_family_missing(tmp_path, monkeypatch):
+    code, g = run_gate(tmp_path, monkeypatch, ml_auc=0.85, rule_auc=0.8, champ=champion("knn__v9", 0.9))
+    assert code == 1 and "stored" in g["ml_checks"]["beats_champion"]["note"]

@@ -1,7 +1,8 @@
 """
 Stage 4: train and compare models with nested leave-one-participant-out (LOSO).
 
-Outer loop: each of the 12 participants is the TEST set once (both of their videos).
+Outer loop: each participant (all folds in params.yaml data.folds) is the TEST set once
+(both of their videos).
 Inner loop (validation): on the other 11, GroupKFold by participant chooses the window length
 (15/30/60 s), hyperparameters, XGBoost's number of trees (early stopping) and the decision
 threshold (max F1 on out-of-fold scores). That setup is refit on the 11 and scored once on

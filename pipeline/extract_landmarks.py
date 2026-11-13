@@ -9,8 +9,10 @@ Fixes vs v1:
   * frames are streamed into MediaPipe; no JPEGs written to disk
   * frames with no face are KEPT (face=0) so later stages can measure face visibility
 
-Output: data/landmarks_10fps/<video>.csv, reports/extraction_summary.json,
-        reports/samples/<video>.jpg (visual check of rotation + landmarks)
+One DVC stage per RLDD fold (`extract_landmarks@<N>`), so adding a fold never re-processes
+the others. The sealed test fold is refused.
+Output: data/landmarks_10fps/fold<N>/<video>.csv, reports/extraction/fold<N>.json,
+        reports/samples/fold<N>/<video>.jpg (visual check of rotation + landmarks)
 """
 
 import argparse
@@ -30,7 +32,7 @@ ROTATIONS = {90: cv2.ROTATE_90_CLOCKWISE, 180: cv2.ROTATE_180, 270: cv2.ROTATE_9
 
 
 def process_video(args) -> dict:
-    video_path, cfg, limit_s = args
+    video_path, cfg, limit_s, out_dir, sample_dir = args
     import mediapipe as mp  # imported in the worker process
 
     name, participant, label = parse_video_name(video_path)
@@ -96,14 +98,14 @@ def process_video(args) -> dict:
                 for i in USED_LANDMARKS:
                     cv2.circle(vis, (int(row[f"x{i}"]), int(row[f"y{i}"])), 2, (0, 255, 0), -1)
                 s = 480 / max(h, w)
-                cv2.imwrite(str(SAMPLE_DIR / f"{name}.jpg"), cv2.resize(vis, (round(w * s), round(h * s))))
+                cv2.imwrite(str(sample_dir / f"{name}.jpg"), cv2.resize(vis, (round(w * s), round(h * s))))
                 sample_saved = True
         rows.append(row)
 
     mesh.close()
     cap.release()
     df = pd.DataFrame(rows)
-    df.to_csv(LANDMARKS_DIR / f"{name}.csv", index=False)
+    df.to_csv(out_dir / f"{name}.csv", index=False)
     n, faces = len(df), int(df["face"].sum()) if len(df) else 0
     return {
         "video": name,
@@ -122,15 +124,17 @@ def process_video(args) -> dict:
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--fold", type=int, required=True, help="RLDD fold to extract (data/raw/fold<N>)")
     ap.add_argument("--only", help="comma-separated video stems (for quick tests)")
     ap.add_argument("--limit-seconds", type=float, default=0, help="only the first N seconds (tests)")
     args = ap.parse_args()
 
     cfg = load_params()["extract"]
-    LANDMARKS_DIR.mkdir(parents=True, exist_ok=True)
-    SAMPLE_DIR.mkdir(parents=True, exist_ok=True)
+    out_dir, sample_dir = LANDMARKS_DIR / f"fold{args.fold}", SAMPLE_DIR / f"fold{args.fold}"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    sample_dir.mkdir(parents=True, exist_ok=True)
 
-    videos = list_videos()
+    videos = list_videos(args.fold)  # refuses the sealed test fold
     if args.only:
         keep = set(args.only.split(","))
         videos = [v for v in videos if v.stem in keep]
@@ -140,7 +144,8 @@ def main():
     ctx = mp_proc.get_context("spawn")
     with ctx.Pool(cfg["workers"]) as pool:
         results = []
-        for r in pool.imap_unordered(process_video, [(v, cfg, args.limit_seconds) for v in videos]):
+        jobs = [(v, cfg, args.limit_seconds, out_dir, sample_dir) for v in videos]
+        for r in pool.imap_unordered(process_video, jobs):
             print(
                 f"{r['video']:>9}: {r['faces']}/{r['frames']} faces ({r['detection_rate_pct']}%), "
                 f"rot {r['rotation_meta']}, {r['elapsed_s']} s",
@@ -152,6 +157,7 @@ def main():
     frames = sum(r["frames"] for r in results)
     faces = sum(r["faces"] for r in results)
     summary = {
+        "fold": args.fold,
         "target_fps": cfg["target_fps"],
         "videos": len(results),
         "frames": frames,
@@ -161,7 +167,8 @@ def main():
         "per_video": results,
     }
     if not args.only and not args.limit_seconds:
-        with open(REPORTS_DIR / "extraction_summary.json", "w") as f:
+        (REPORTS_DIR / "extraction").mkdir(parents=True, exist_ok=True)
+        with open(REPORTS_DIR / "extraction" / f"fold{args.fold}.json", "w") as f:
             json.dump(summary, f, indent=2)
     print(json.dumps({k: v for k, v in summary.items() if k != "per_video"}, indent=2))
 

@@ -1,5 +1,6 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # dvc.yaml — the 7-stage training pipeline (v2). All settings come from params.yaml.
+# (extract_landmarks runs once per fold in data.folds: extract_landmarks@1, @2, ...)
 #
 #   dvc repro            # run what is stale (Airflow's DAGs call exactly this)
 #   dvc dag              # show the graph
@@ -10,22 +11,28 @@
 # ─────────────────────────────────────────────────────────────────────────────
 stages:
 
+  # One stage per RLDD fold (extract_landmarks@1, @2, ...): adding a fold to params.yaml
+  # data.folds only processes that fold. data/raw/fold<N> is usually a symlink to an external
+  # drive; DVC hashes the real files behind it. The sealed test fold is refused by the script.
   extract_landmarks:
-    cmd: python -m pipeline.extract_landmarks
-    desc: 'Video -> 10 fps landmarks (rotation applied, real image size, MediaPipe video mode)'
-    deps:
-    - data/raw
-    - pipeline/extract_landmarks.py
-    - pipeline/dataset.py
-    - ddd_core/geometry.py
-    params:
-    - extract
-    outs:
-    - data/landmarks_10fps
-    - reports/samples
-    metrics:
-    - reports/extraction_summary.json:
-        cache: false
+    foreach: ${data.folds}
+    do:
+      cmd: python -m pipeline.extract_landmarks --fold ${item}
+      desc: 'Video -> 10 fps landmarks (rotation applied, real image size, MediaPipe video mode)'
+      deps:
+      - data/raw/fold${item}
+      - pipeline/extract_landmarks.py
+      - pipeline/dataset.py
+      - ddd_core/geometry.py
+      params:
+      - extract
+      - data.sealed_test_fold
+      outs:
+      - data/landmarks_10fps/fold${item}
+      - reports/samples/fold${item}
+      metrics:
+      - reports/extraction/fold${item}.json:
+          cache: false
 
   frame_features:
     cmd: python -m pipeline.frame_features
@@ -33,7 +40,10 @@ stages:
     deps:
     - data/landmarks_10fps
     - pipeline/frame_features.py
+    - pipeline/dataset.py
     - ddd_core/geometry.py
+    params:
+    - data
     outs:
     - data/frame_features.parquet
 
@@ -114,7 +124,7 @@ stages:
     cmd: python -m pipeline.report
     desc: 'Write reports/RESULTS.md and the per-participant chart'
     deps:
-    - reports/extraction_summary.json
+    - reports/extraction
     - reports/window_summary.json
     - reports/loso_metrics.json
     - reports/loso_per_participant.csv
@@ -122,6 +132,8 @@ stages:
     - reports/gate.json
     - reports/final_model.json
     - pipeline/report.py
+    params:
+    - data
     outs:
     - reports/RESULTS.md:
         cache: false

@@ -10,6 +10,7 @@ import pandas as pd  # noqa: E402
 
 from ddd_core.config import load_params  # noqa: E402
 from pipeline.dataset import REPORTS_DIR as R  # noqa: E402
+from pipeline.dataset import active_folds  # noqa: E402
 
 
 def load(name):
@@ -17,20 +18,26 @@ def load(name):
 
 
 def main():
-    main_set = load_params()["features"]["main_set"]
-    ext, win, loso = load("extraction_summary.json"), load("window_summary.json"), load("loso_metrics.json")
+    params = load_params()
+    main_set = params["features"]["main_set"]
+    folds = active_folds(params)
+    ext = [load(f"extraction/fold{f}.json") for f in folds]
+    frames, faces = sum(e["frames"] for e in ext), sum(e["faces"] for e in ext)
+    win, loso = load("window_summary.json"), load("loso_metrics.json")
     leaky, gate, final = load("leaky_vs_loso.json"), load("gate.json"), load("final_model.json")
     loso.pop("_meta", None)
     per_part = pd.read_csv(R / "loso_per_participant.csv")
+    n_people = per_part["participant"].nunique()
 
     L = ["# Results: subject-wise evaluation (v2)", ""]
     L += [
         "## Data",
         "",
-        "- 12 participants (UTA-RLDD Fold 1, participants 01-12), 24 videos: alert = KSS 0, drowsy = KSS 10. "
-        "The duplicated drowsy8 file was replaced with the original.",
-        f"- {ext['target_fps']} fps by timestamp, rotation metadata applied: {ext['frames']:,} frames, "
-        f"face found in {ext['faces']:,} ({ext['detection_rate_pct']} %).",
+        f"- UTA-RLDD folds {folds}: {n_people} participants, {2 * n_people} videos "
+        "(alert = KSS 0, drowsy = KSS 10). "
+        f"Fold {params['data']['sealed_test_fold']} is sealed for the final test and was not used.",
+        f"- {params['extract']['target_fps']} fps by timestamp, rotation metadata applied: {frames:,} frames, "
+        f"face found in {faces:,} ({100 * faces / max(frames, 1):.2f} %).",
         "- Windows (2 s stride, face in >= 80 % of expected frames): "
         + ", ".join(
             f"{k} s: {v['windows']:,} (dropped {v['dropped_low_face']})" for k, v in win["per_window_length"].items()
@@ -99,7 +106,7 @@ def main():
     L += [f"- Deployed: **{dep['model'] if dep else 'nothing'}**" + (f" — {dep['reason']}" if dep else ""), ""]
 
     L += [
-        "## Final model (fit on all 12 participants)",
+        f"## Final model (fit on all {n_people} participants)",
         "",
         f"- {final['model']} on {final['feature_set']}, {final['window_s']} s windows, config {final['config']}, "
         f"trees {final['n_estimators']}, threshold {final['threshold']:.4f} (from grouped out-of-fold scores).",
@@ -127,7 +134,7 @@ def main():
         "## Caveats",
         "",
         "- Labels are per video (self-reported KSS), not per moment: a 'drowsy' video contains alert moments.",
-        "- 12 participants is small; the spread across people matters as much as the mean.",
+        f"- {n_people} participants is still small; the spread across people matters as much as the mean.",
         "- The deployed model family was picked by comparing outer LOSO results (mild optimism). "
         "Everything inside a fold (window, hyperparameters, trees, threshold) was chosen without the test person.",
         "- RLDD was recorded at a desk, not while driving.",

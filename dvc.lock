@@ -49,37 +49,48 @@ stages:
     deps:
     - path: data/landmarks_10fps
       hash: md5
-      md5: 23fdf4fb4b3d5f3141d184c79e4f80f1.dir
-      size: 120484778
-      nfiles: 24
+      md5: 7ac1f799d8fd7a13e8efa70767735aa3.dir
+      size: 246099591
+      nfiles: 48
     - path: ddd_core/geometry.py
       hash: md5
       md5: 7c8daa2dfc436560da542398a02896e6
       size: 3242
+    - path: pipeline/dataset.py
+      hash: md5
+      md5: 0b96482a68217637c80441f01070b404
+      size: 2608
     - path: pipeline/frame_features.py
       hash: md5
-      md5: ad559807de0ca1e7b91d0b9a93d5d38f
-      size: 1384
+      md5: fefb9ae946985c15cbf2aaf3ab5596ff
+      size: 1841
+    params:
+      params.yaml:
+        data:
+          folds:
+          - 1
+          - 2
+          sealed_test_fold: 4
     outs:
     - path: data/frame_features.parquet
       hash: md5
-      md5: 579f58bb3f06445397295a34e196dd61
-      size: 7866010
+      md5: 78ceb9d3e4a13c4a4278ebe0ba368c87
+      size: 14383335
   window_features:
     cmd: python -m pipeline.window_features
     deps:
     - path: data/frame_features.parquet
       hash: md5
-      md5: 579f58bb3f06445397295a34e196dd61
-      size: 7866010
+      md5: 78ceb9d3e4a13c4a4278ebe0ba368c87
+      size: 14383335
     - path: ddd_core/windows.py
       hash: md5
       md5: de7725a9da62c96c12fe317d9e6c02ee
       size: 3613
     - path: pipeline/window_features.py
       hash: md5
-      md5: 3445e36e25226eb09c4a38eaf4be5e01
-      size: 2541
+      md5: 8c82595a67f77712dffe7fa345a5e676
+      size: 2618
     params:
       params.yaml:
         extract.target_fps: 10
@@ -96,19 +107,19 @@ stages:
     outs:
     - path: data/windows.parquet
       hash: md5
-      md5: 704f23a92cb915cea345f668c0631d72
-      size: 1396742
+      md5: b3b966c2262306a99f5df7506eea1e8b
+      size: 2932359
     - path: reports/window_summary.json
       hash: md5
-      md5: 17fad5a26933c5aa02e29a06cfa36a0c
-      size: 2545
+      md5: 5576416c2ef14deb7002360e32a4d032
+      size: 4852
   train_evaluate:
     cmd: python -m pipeline.train_evaluate
     deps:
     - path: data/windows.parquet
       hash: md5
-      md5: 704f23a92cb915cea345f668c0631d72
-      size: 1396742
+      md5: b3b966c2262306a99f5df7506eea1e8b
+      size: 2932359
     - path: ddd_core/windows.py
       hash: md5
       md5: de7725a9da62c96c12fe317d9e6c02ee
@@ -123,8 +134,8 @@ stages:
       size: 4673
     - path: pipeline/train_evaluate.py
       hash: md5
-      md5: 4b61045677fd59be0a2ee79a56d32dea
-      size: 5666
+      md5: 5fa852f17d6ebe49ae09cb2f3ccdece6
+      size: 5693
     params:
       params.yaml:
         cv:
@@ -163,31 +174,31 @@ stages:
     outs:
     - path: data/loso_predictions.parquet
       hash: md5
-      md5: 373e0ed416e0035c36d3872ab1817f39
-      size: 478346
+      md5: 97af165e1bebc25c0d71a7ecc990474e
+      size: 970418
     - path: reports/loso_choices.json
       hash: md5
-      md5: f4fa581d7aa727e3f2adef71e58f1f71
-      size: 31606
+      md5: 2c742b4a84c7c8c095c81ee461379eb2
+      size: 63295
     - path: reports/loso_metrics.json
       hash: md5
-      md5: 1a48a84e9a2ae650808928e69934a09b
-      size: 7919
+      md5: 450febc63ba7b088a07eb32346793c6f
+      size: 8044
     - path: reports/loso_per_participant.csv
       hash: md5
-      md5: 1fdfdb19845f055598c77c2dd2c2790d
-      size: 8763
+      md5: 09304c5c7fbffd4525eba60b9ca2fee1
+      size: 17413
   gate:
     cmd: python -m pipeline.gate
     deps:
     - path: pipeline/gate.py
       hash: md5
-      md5: 2e9ee6404e2f530f971321acb07e1dda
-      size: 5804
+      md5: 695f9e4676c7b685ef46fb84ba44a96e
+      size: 6515
     - path: reports/loso_metrics.json
       hash: md5
-      md5: 1a48a84e9a2ae650808928e69934a09b
-      size: 7919
+      md5: 450febc63ba7b088a07eb32346793c6f
+      size: 8044
     params:
       params.yaml:
         features.main_set: v2_12
@@ -203,15 +214,15 @@ stages:
     outs:
     - path: reports/gate.json
       hash: md5
-      md5: 49a494c991b9ef0c59a8bec908aa3e0c
-      size: 950
+      md5: 923754f2648c630884d4a55a2b7b8f3c
+      size: 1046
   train_final:
     cmd: python -m pipeline.train_final
     deps:
     - path: data/windows.parquet
       hash: md5
-      md5: 704f23a92cb915cea345f668c0631d72
-      size: 1396742
+      md5: b3b966c2262306a99f5df7506eea1e8b
+      size: 2932359
     - path: pipeline/models.py
       hash: md5
       md5: 33c4ccd7e6fe09100f435faf6736cb43
@@ -222,12 +233,12 @@ stages:
       size: 1176
     - path: pipeline/train_final.py
       hash: md5
-      md5: 339381488cb163ebd9222e75ddf2641a
-      size: 6128
+      md5: b3e151cd4753566726b207fe67f2e481
+      size: 6167
     - path: reports/gate.json
       hash: md5
-      md5: 49a494c991b9ef0c59a8bec908aa3e0c
-      size: 950
+      md5: 923754f2648c630884d4a55a2b7b8f3c
+      size: 1046
     params:
       params.yaml:
         cv:
@@ -271,53 +282,151 @@ stages:
     outs:
     - path: data/drift_baseline.json
       hash: md5
-      md5: 392ed6b1f7b61c2f26bb4ddf20432a8a
-      size: 6300
+      md5: ee4a11a5676bdb3632ea879b8f8ef2e5
+      size: 6329
     - path: reports/final_model.json
       hash: md5
-      md5: a421b84575010fae22629f5f3a6eb440
-      size: 519
+      md5: 9f01faba92603f6bdfc9d5352e9c8849
+      size: 521
   report:
     cmd: python -m pipeline.report
     deps:
     - path: pipeline/report.py
       hash: md5
-      md5: 9e79e1e7ca2a9a186fc12ec9832c8853
-      size: 7012
-    - path: reports/extraction_summary.json
+      md5: 7c0f989a7c2395c89d4c419569ffe5cd
+      size: 7352
+    - path: reports/extraction
       hash: md5
-      md5: 03ec0b7532db2c1607fd936057848990
-      size: 8239
+      md5: e8e7103f77de0a103ede19d12049f658.dir
+      size: 16540
+      nfiles: 2
     - path: reports/final_model.json
       hash: md5
-      md5: a421b84575010fae22629f5f3a6eb440
-      size: 519
+      md5: 9f01faba92603f6bdfc9d5352e9c8849
+      size: 521
     - path: reports/gate.json
       hash: md5
-      md5: 49a494c991b9ef0c59a8bec908aa3e0c
-      size: 950
+      md5: 923754f2648c630884d4a55a2b7b8f3c
+      size: 1046
     - path: reports/leaky_vs_loso.json
       hash: md5
-      md5: 8213ca2baf19f9ec0c331ce3be654e5c
+      md5: 00ad22db42931f140f448fb86db15e58
       size: 945
     - path: reports/loso_metrics.json
       hash: md5
-      md5: 1a48a84e9a2ae650808928e69934a09b
-      size: 7919
+      md5: 450febc63ba7b088a07eb32346793c6f
+      size: 8044
     - path: reports/loso_per_participant.csv
       hash: md5
-      md5: 1fdfdb19845f055598c77c2dd2c2790d
-      size: 8763
+      md5: 09304c5c7fbffd4525eba60b9ca2fee1
+      size: 17413
     - path: reports/window_summary.json
       hash: md5
-      md5: 17fad5a26933c5aa02e29a06cfa36a0c
-      size: 2545
+      md5: 5576416c2ef14deb7002360e32a4d032
+      size: 4852
+    params:
+      params.yaml:
+        data:
+          folds:
+          - 1
+          - 2
+          sealed_test_fold: 4
     outs:
     - path: reports/RESULTS.md
       hash: md5
-      md5: 7912bc970cd666ed8607cb6b93f71a76
-      size: 4919
+      md5: 5a32591f3469bf3deefcc3f1a34acd7a
+      size: 5589
     - path: reports/per_participant_auc.png
       hash: md5
-      md5: b0ba8631ef6bd83055b61dd589181c0f
-      size: 43775
+      md5: 9dc8a29a856ef0359d101c0a402ce4e6
+      size: 47619
+  extract_landmarks@2:
+    cmd: python -m pipeline.extract_landmarks --fold 2
+    deps:
+    - path: data/raw/fold2
+      hash: md5
+      md5: f4e373970dfbe0dc736d8423cd32fdac.dir
+      size: 15469186225
+      nfiles: 25
+    - path: ddd_core/geometry.py
+      hash: md5
+      md5: 7c8daa2dfc436560da542398a02896e6
+      size: 3242
+    - path: pipeline/dataset.py
+      hash: md5
+      md5: 0b96482a68217637c80441f01070b404
+      size: 2608
+    - path: pipeline/extract_landmarks.py
+      hash: md5
+      md5: feb17581e38227ff1775b8475dd8c6ed
+      size: 6849
+    params:
+      params.yaml:
+        data.sealed_test_fold: 4
+        extract:
+          target_fps: 10
+          max_side: 960
+          apply_rotation: true
+          min_detection_confidence: 0.5
+          min_tracking_confidence: 0.5
+          workers: 4
+    outs:
+    - path: data/landmarks_10fps/fold2
+      hash: md5
+      md5: acd4b3f628c0b80645a4086bd00feed5.dir
+      size: 125614813
+      nfiles: 24
+    - path: reports/extraction/fold2.json
+      hash: md5
+      md5: 45695688d9991be8435d1f3d275c1dbd
+      size: 8288
+    - path: reports/samples/fold2
+      hash: md5
+      md5: a059f97e695c6fc666b263829c058d91.dir
+      size: 910364
+      nfiles: 24
+  extract_landmarks@1:
+    cmd: python -m pipeline.extract_landmarks --fold 1
+    deps:
+    - path: data/raw/fold1
+      hash: md5
+      md5: ebc609bb2c5b46368f83db02a39b8045.dir
+      size: 16181179960
+      nfiles: 25
+    - path: ddd_core/geometry.py
+      hash: md5
+      md5: 7c8daa2dfc436560da542398a02896e6
+      size: 3242
+    - path: pipeline/dataset.py
+      hash: md5
+      md5: 0b96482a68217637c80441f01070b404
+      size: 2608
+    - path: pipeline/extract_landmarks.py
+      hash: md5
+      md5: feb17581e38227ff1775b8475dd8c6ed
+      size: 6849
+    params:
+      params.yaml:
+        data.sealed_test_fold: 4
+        extract:
+          target_fps: 10
+          max_side: 960
+          apply_rotation: true
+          min_detection_confidence: 0.5
+          min_tracking_confidence: 0.5
+          workers: 4
+    outs:
+    - path: data/landmarks_10fps/fold1
+      hash: md5
+      md5: 23fdf4fb4b3d5f3141d184c79e4f80f1.dir
+      size: 120484778
+      nfiles: 24
+    - path: reports/extraction/fold1.json
+      hash: md5
+      md5: f7963bbb92d655caeb257bfe704856db
+      size: 8252
+    - path: reports/samples/fold1
+      hash: md5
+      md5: 783d3aff3a640f829cbb597e6e5ad616.dir
+      size: 957105
+      nfiles: 24

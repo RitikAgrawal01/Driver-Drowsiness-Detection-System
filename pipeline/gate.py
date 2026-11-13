@@ -6,7 +6,9 @@ ML candidate = the ML model on the main feature set with the best mean per-parti
 under nested LOSO. Pre-registered rules (params.yaml -> gate):
   1. candidate mean per-participant ROC-AUC > the PERCLOS rule's
   2. candidate pooled LOSO ROC-AUC >= min_pooled_roc_auc
-  3. candidate beats the registered champion's per-participant ROC-AUC by > min_gain
+  3. candidate beats the registered champion by > min_gain, with the champion's model family
+     RE-SCORED on the current data in this run (a stored score from a smaller dataset is not
+     comparable); same family as the champion = re-trained champion, allowed.
      (no champion yet -> first model, explicitly allowed; MLflow unreachable -> FAIL)
 Deployment policy: if the ML candidate fails and deploy_baseline_if_ml_fails is true, the
 PERCLOS rule is deployed instead, provided it passes rules 2 and 3 itself.
@@ -18,7 +20,7 @@ import sys
 
 from ddd_core.config import load_params
 from pipeline.dataset import REPORTS_DIR
-from pipeline.evaluation import file_md5, save_json
+from pipeline.evaluation import save_json
 
 
 def current_champion(name: str, alias: str) -> dict:
@@ -43,20 +45,36 @@ def current_champion(name: str, alias: str) -> dict:
     }
 
 
-def champion_check(run_key: str, pp_auc: float, champ: dict | None, loso_md5: str, min_gain: float) -> dict:
+def champion_check(run_key: str, pp_auc: float, champ: dict | None, metrics: dict, min_gain: float) -> dict:
+    """Compare the candidate with the current champion ON THE SAME DATA AND PROTOCOL.
+
+    The champion's stored LOSO score may come from a different (smaller) dataset, so it is not
+    comparable. train_evaluate re-evaluates every model family on the current data, so the
+    champion's family is re-scored here; the stored score is only a fallback.
+    """
     if champ is None:
         return {"passed": False, "note": "cannot read champion from MLflow (fail closed)"}
     if champ["status"] == "none":
         return {"passed": True, "note": "no registered champion yet (first model)"}
-    if champ["loso_md5"] == loso_md5 and champ.get("run_key") == run_key:
-        return {"passed": True, "note": f"candidate IS champion v{champ['version']}"}
-    same_score = champ["pp_auc"] is not None and abs(pp_auc - champ["pp_auc"]) < 1e-9
-    if champ.get("run_key") == run_key and same_score:
-        # a re-run that reproduces the champion exactly (same model family, same LOSO score)
-        return {"passed": True, "note": f"reproduces champion v{champ['version']} exactly"}
+    champ_key = champ.get("run_key")
+    if champ_key == run_key:
+        return {
+            "passed": True,
+            "note": f"same model family as champion v{champ['version']}, re-trained on current data",
+        }
+    if champ_key in metrics:
+        rescored = metrics[champ_key]["per_participant_mean"]["roc_auc"]
+        return {
+            "champion_version": champ["version"],
+            "champion_family": champ_key,
+            "champion_pp_auc_on_current_data": rescored,
+            "required_gain": min_gain,
+            "passed": pp_auc > rescored + min_gain,
+        }
     return {
         "champion_version": champ["version"],
-        "champion_pp_auc": champ["pp_auc"],
+        "champion_pp_auc_stored": champ["pp_auc"],
+        "note": "champion family not evaluated in this run; compared with its stored score (different data)",
         "required_gain": min_gain,
         "passed": champ["pp_auc"] is not None and pp_auc > champ["pp_auc"] + min_gain,
     }
@@ -68,7 +86,6 @@ def main():
     metrics_path = REPORTS_DIR / "loso_metrics.json"
     metrics = json.loads(metrics_path.read_text())
     metrics.pop("_meta", None)
-    loso_md5 = file_md5(metrics_path)
 
     candidates = {k: v for k, v in metrics.items() if k.endswith(f"__{main_set}")}
     cand_key = max(candidates, key=lambda k: candidates[k]["per_participant_mean"]["roc_auc"])
@@ -90,7 +107,7 @@ def main():
             "required": g["min_pooled_roc_auc"],
             "passed": cand["pooled"]["roc_auc"] >= g["min_pooled_roc_auc"],
         },
-        "beats_champion": champion_check(cand_key, cand_auc, champ, loso_md5, g["min_gain_over_champion"]),
+        "beats_champion": champion_check(cand_key, cand_auc, champ, metrics, g["min_gain_over_champion"]),
     }
     ml_passed = all(c["passed"] for c in ml_checks.values())
     result = {"ml_candidate": cand_key, "baseline_run": base_key, "ml_checks": ml_checks, "ml_gate_passed": ml_passed}
@@ -110,7 +127,7 @@ def main():
                 "required": g["min_pooled_roc_auc"],
                 "passed": base["pooled"]["roc_auc"] >= g["min_pooled_roc_auc"],
             },
-            "beats_champion": champion_check(base_key, base_auc, champ, loso_md5, g["min_gain_over_champion"]),
+            "beats_champion": champion_check(base_key, base_auc, champ, metrics, g["min_gain_over_champion"]),
         }
         result["baseline_checks"] = base_checks
         if all(c["passed"] for c in base_checks.values()):

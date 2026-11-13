@@ -1,5 +1,5 @@
 """
-Stage 6: fit the gated candidate on ALL 12 participants and register it as `@champion`.
+Stage 6: fit the gated candidate on ALL training participants and register it as `@champion`.
 Runs only if the gate stage passed (DVC stops the pipeline when gate.py exits 1).
 
 Window length, hyperparameters, number of trees and threshold are chosen with GroupKFold over
@@ -85,7 +85,7 @@ def main():
                 "window_s": choice["window_s"],
                 "threshold": round(choice["threshold"], 6),
                 "n_estimators": choice["n_estimators"],
-                "train_participants": 12,
+                "train_participants": int(train["participant"].nunique()),
                 "train_windows": len(train),
                 **{f"cfg_{k}": v for k, v in choice["config"].items()},
             }
