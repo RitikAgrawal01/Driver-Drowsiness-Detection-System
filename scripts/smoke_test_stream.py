@@ -68,9 +68,16 @@ async def main(args) -> int:
         await ws.send(json.dumps({"type": "close"}))
         summary = json.loads(await ws.recv())
     lat = sorted(latencies)
-    report = {"frames": len(lat), "states": dict(states), "predictions": predictions, "alarms": alarms,
-              "latency_ms_p50": round(lat[len(lat) // 2], 1), "latency_ms_p95": round(lat[int(len(lat) * 0.95)], 1),
-              "errors": errors[:3], "server_summary": summary}
+    report = {
+        "frames": len(lat),
+        "states": dict(states),
+        "predictions": predictions,
+        "alarms": alarms,
+        "latency_ms_p50": round(lat[len(lat) // 2], 1),
+        "latency_ms_p95": round(lat[int(len(lat) * 0.95)], 1),
+        "errors": errors[:3],
+        "server_summary": summary,
+    }
     print(json.dumps(report, indent=2))
     return 0 if predictions > 0 and not errors else 1
 
