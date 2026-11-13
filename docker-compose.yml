@@ -31,7 +31,6 @@ volumes:
   prometheus_data:
   alertmanager_data:
   grafana_data:
-  airflow_home:
 
 x-params: &params ./params.yaml:/app/params.yaml:ro
 
@@ -175,7 +174,8 @@ services:
     environment:
       AIRFLOW__CORE__EXECUTOR: SequentialExecutor   # demo setup; production: LocalExecutor/Celery + Postgres
       AIRFLOW__CORE__LOAD_EXAMPLES: "False"
-      AIRFLOW__CORE__DAGS_FOLDER: /opt/project/airflow/dags
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "False"   # alert-triggered runs must not sit queued
+      AIRFLOW__CORE__DAGS_FOLDER: ${REPO_DIR}/airflow/dags
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: sqlite:////opt/airflow/home/airflow.db
       AIRFLOW_HOME: /opt/airflow/home
       AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW__CORE__FERNET_KEY}
@@ -183,26 +183,22 @@ services:
       AIRFLOW__API__AUTH_BACKENDS: airflow.api.auth.backend.basic_auth
       AIRFLOW_ADMIN_USER: ${AIRFLOW_ADMIN_USER}
       AIRFLOW_ADMIN_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD}
-      DDD_REPO: /opt/project
-      DDD_PARAMS: /opt/project/params.yaml
+      DDD_REPO: ${REPO_DIR}
+      DDD_PARAMS: ${REPO_DIR}/params.yaml
       MLFLOW_TRACKING_URI: http://mlflow:5000
       MODEL_SERVER_URL: http://model_server:8001
       BACKEND_URL: http://backend:8000
       ADMIN_TOKEN: ${ADMIN_TOKEN}
-      PYTHONPATH: /opt/project:/opt/project/airflow/dags
+      PYTHONPATH: ${REPO_DIR}:${REPO_DIR}/airflow/dags
       GLOG_minloglevel: "2"
     volumes:
-      - .:/opt/project                                   # the repo: dvc.yaml, params.yaml, data, .git
+      # The repo at the SAME absolute path as on the host: DVC's cache uses absolute symlinks.
+      - .:${REPO_DIR}
       - ${DVC_REMOTE_DIR}:${DVC_REMOTE_DIR}              # same path as in .dvc/config
-      - airflow_home:/opt/airflow/home
-    working_dir: /opt/project
+      - ./logs/airflow_home:/opt/airflow/home            # owned by the host user (gitignored)
+    working_dir: ${REPO_DIR}
     depends_on:
       mlflow: {condition: service_healthy}
     networks: [ddd_network]
     restart: unless-stopped
-    command: >
-      bash -c "airflow db migrate &&
-      (airflow users list | grep -q \"$${AIRFLOW_ADMIN_USER}\" ||
-       airflow users create --username \"$${AIRFLOW_ADMIN_USER}\" --password \"$${AIRFLOW_ADMIN_PASSWORD}\"
-         --firstname DDD --lastname Admin --role Admin --email admin@example.com) &&
-      (airflow scheduler &) && exec airflow webserver"
+    command: ["bash", "${REPO_DIR}/airflow/entrypoint.sh"]

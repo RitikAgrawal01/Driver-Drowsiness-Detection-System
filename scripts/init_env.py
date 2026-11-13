@@ -38,6 +38,8 @@ def main():
         key, val = m.group(1), m.group(2)
         if key in old and old[key] not in ("", "change-me"):
             val = old[key]
+        elif key == "REPO_DIR":
+            val = str(ROOT)
         elif key == "AIRFLOW__CORE__FERNET_KEY":
             val = base64.urlsafe_b64encode(os.urandom(32)).decode()
         elif key in SECRET_KEYS:
