@@ -30,19 +30,23 @@ def configs(model: str, mp: dict) -> list[dict]:
 
 def build(model: str, cfg: dict, mp: dict, n_estimators: int | None = None, early_stop: bool = False):
     if model == "logreg":
-        return Pipeline([("scaler", StandardScaler()),
-                         ("clf", LogisticRegression(C=cfg["C"], max_iter=5000))])
+        return Pipeline([("scaler", StandardScaler()), ("clf", LogisticRegression(C=cfg["C"], max_iter=5000))])
     if model == "svm":
-        return Pipeline([("scaler", StandardScaler()),
-                         ("clf", SVC(kernel="rbf", C=cfg["C"], gamma=cfg["gamma"]))])
+        return Pipeline([("scaler", StandardScaler()), ("clf", SVC(kernel="rbf", C=cfg["C"], gamma=cfg["gamma"]))])
     if model == "xgboost":
         x = mp["xgboost"]
         return XGBClassifier(
             n_estimators=x["max_estimators"] if early_stop else n_estimators,
             early_stopping_rounds=x["early_stopping_rounds"] if early_stop else None,
-            learning_rate=x["learning_rate"], subsample=x["subsample"],
-            colsample_bytree=x["colsample_bytree"], eval_metric="logloss",
-            random_state=42, n_jobs=1, verbosity=0, **cfg)
+            learning_rate=x["learning_rate"],
+            subsample=x["subsample"],
+            colsample_bytree=x["colsample_bytree"],
+            eval_metric="logloss",
+            random_state=42,
+            n_jobs=1,
+            verbosity=0,
+            **cfg,
+        )
     raise ValueError(model)
 
 
@@ -88,8 +92,13 @@ def select(model: str, data: dict, features: list, mp: dict, n_splits: int) -> d
                     s = score(model, est, X.iloc[va])
                 oof[va] = s
                 aucs.append(roc_auc_score(y[va], s))
-            cand = {"window_s": int(L), "config": cfg, "inner_auc": float(np.mean(aucs)),
-                    "oof": oof, "n_estimators": int(round(np.mean(iters))) if iters else None}
+            cand = {
+                "window_s": int(L),
+                "config": cfg,
+                "inner_auc": float(np.mean(aucs)),
+                "oof": oof,
+                "n_estimators": int(round(np.mean(iters))) if iters else None,
+            }
             if best is None or cand["inner_auc"] > best["inner_auc"]:
                 best = cand
     df = data[best["window_s"]]

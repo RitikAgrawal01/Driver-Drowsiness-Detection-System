@@ -1,68 +1,16 @@
-# .dockerignore
-# Exclude files from Docker build context to keep images small and fast
-
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-*.egg-info/
-dist/
-build/
-.eggs/
-
-# Virtual envs
-.venv/
-venv/
-env/
-
-# Environment
-.env
-.env.*
-
-# Git
-.git/
-.gitignore
-.gitattributes
-
-# DVC
-.dvc/
-*.dvc
-
-# Data (large — tracked by DVC, not needed in image)
-data/
-mlruns/
-mlartifacts/
-
-# Logs
-logs/
-*.log
-
-# Tests
-tests/
-coverage.xml
-.pytest_cache/
-htmlcov/
-
-# Frontend (if in root context)
-frontend/node_modules/
-frontend/dist/
-
-# IDE
-.vscode/
-.idea/
-
-# Docs
-docs/
-*.md
-
-# Reports (generated at runtime)
-reports/
-
-# Scripts
-tools/
-
-# OS
-.DS_Store
-Thumbs.db
+# Build context is the repo root for backend / model_server / airflow images.
+# Allow-list: send only source code (data/raw alone is 16 GB).
+*
+!ddd_core/
+!backend/
+!model_server/
+!airflow/
+!pipeline/
+!analysis/
+!tools/
+!params.yaml
+!requirements-pipeline.txt
+**/__pycache__
+**/*.pyc
+**/*.whl
+airflow/airflow.db

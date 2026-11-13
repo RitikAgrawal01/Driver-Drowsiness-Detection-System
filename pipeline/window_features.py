@@ -30,13 +30,22 @@ def main():
             s = t[0]
             while s + length <= t[-1] + 0.5 / fps:
                 lo, hi = np.searchsorted(t, [s, s + length])
-                w = window_features(*(cols[c][lo:hi] for c in ["t", "face", "ear", "mar", "pitch", "yaw", "roll"]),
-                                    length_s=float(length), cfg=cfg, fps=fps)
+                w = window_features(
+                    *(cols[c][lo:hi] for c in ["t", "face", "ear", "mar", "pitch", "yaw", "roll"]),
+                    length_s=float(length),
+                    cfg=cfg,
+                    fps=fps,
+                )
                 if w is None:
                     dropped += 1
                 else:
-                    w.update(video=video, participant=int(v["participant"].iloc[0]),
-                             label=int(v["label"].iloc[0]), window_s=int(length), start_s=round(float(s), 2))
+                    w.update(
+                        video=video,
+                        participant=int(v["participant"].iloc[0]),
+                        label=int(v["label"].iloc[0]),
+                        window_s=int(length),
+                        start_s=round(float(s), 2),
+                    )
                     out.append(w)
                     kept += 1
                 s += cfg["stride_s"]
@@ -47,7 +56,8 @@ def main():
 
     counts = df.groupby(["window_s", "participant", "label"]).size().unstack("label", fill_value=0)
     summary["per_participant"] = {
-        f"L{L}_p{p}": {"alert": int(r[0]), "drowsy": int(r[1])} for (L, p), r in counts.iterrows()}
+        f"L{L}_p{p}": {"alert": int(r[0]), "drowsy": int(r[1])} for (L, p), r in counts.iterrows()
+    }
     with open(REPORTS_DIR / "window_summary.json", "w") as f:
         json.dump(summary, f, indent=2)
     print(json.dumps(summary["per_window_length"], indent=2))

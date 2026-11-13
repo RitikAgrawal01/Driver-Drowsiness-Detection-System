@@ -20,10 +20,21 @@ import { Camera, CameraOff, AlertTriangle, CheckCircle, Volume2, VolumeX } from 
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import { useWebcam } from '../hooks/useWebcam'
 import { useSessionStore } from '../store/sessionStore'
-import { startSession, stopSession, openWebSocket } from '../services/api'
+import { openWebSocket, getDrift } from '../services/api'
 import GaugeChart from '../components/charts/GaugeChart'
 
-const FPS = 15  // frames to send per second
+const MAX_WIDTH = 640  // downscale before JPEG encoding (keeps frames well under the server's size limit)
+
+// Display for every backend state. Errors and a missing face are never shown as "alert".
+const STATE_UI = {
+  idle:       { label: 'STANDBY',           color: 'var(--text-muted)' },
+  warming_up: { label: 'CALIBRATING',       color: 'var(--text-muted)' },
+  alert:      { label: 'ALERT',             color: 'var(--green)' },
+  drowsy:     { label: 'DROWSY',            color: 'var(--red)' },
+  no_face:    { label: 'NO FACE — CHECK',   color: 'var(--amber)' },
+  degraded:   { label: 'LOW QUALITY INPUT', color: 'var(--amber)' },
+  error:      { label: 'SYSTEM ERROR',      color: 'var(--amber)' },
+}
 
 export default function LiveMonitor() {
   const { videoRef, canvasRef, isOn, error: camError, start: startCam, stop: stopCam } = useWebcam()
@@ -35,7 +46,7 @@ export default function LiveMonitor() {
   const alertedRef = useRef(false)
 
   const isDrowsy   = store.currentState === 'drowsy'
-  const isBuffering = store.currentState === 'buffering'
+  const driftTimerRef = useRef(null)
 
   // Play audio alert on drowsy
   useEffect(() => {
@@ -60,68 +71,41 @@ export default function LiveMonitor() {
     setLoading(true)
     setError(null)
     try {
-      // 1. Start camera first — if this fails we never touch the backend
+      // 1. Camera first — if this fails we never touch the backend
       await startCam()
-
-      // 2. Create backend session (10s timeout — fails fast if backend unreachable)
-      const session = await startSession(30)
-
-      // Reset store BEFORE setSession so session ID isn't immediately wiped
       store.reset()
-      store.setSession(session.session_id)
 
-      // 3. CHANGED: Use openWebSocket() which handles all WS setup atomically.
-      //    Returns a resolved WebSocket, or throws with a clear error message.
-      //    The onClose callback triggers handleStop if session is still active.
-      const ws = await openWebSocket(
-        store.handleWsMessage,
-        () => { if (store.isActive) handleStop() },
-      )
-
-      // 4. Send init message — WS is guaranteed open here
-      ws.send(JSON.stringify({
-        type:        'init',
-        session_id:  session.session_id,
-        window_size: 30,
-      }))
-
+      // 2. WebSocket. Backpressure: at most ONE frame in flight; the server answers every frame.
+      let ready = false, inFlight = false, sentAt = 0
+      const onMessage = (msg) => {
+        if (msg.type === 'init_ack') ready = true
+        if ((msg.type === 'status' || msg.type === 'error') && inFlight) {
+          inFlight = false
+          store.recordLatency(performance.now() - sentAt)
+        }
+        store.handleWsMessage(msg)
+      }
+      const ws = await openWebSocket(onMessage, () => { if (useSessionStore.getState().isActive) handleStop() })
+      ws.send(JSON.stringify({ type: 'init' }))  // the server decides window length and fps
       store.setWs(ws)
 
-      // ── HIGH-PERFORMANCE FRAME CAPTURE LOOP (requestAnimationFrame) ──
-      let lastFrameTime = 0
-      const frameInterval = 1000 / FPS
-
-      const captureLoop = (timestamp) => {
-        if (ws.readyState !== WebSocket.OPEN) return
-
-        // Schedule next frame immediately (before heavy work)
-        intervalRef.current = requestAnimationFrame(captureLoop)
-
-        // Throttle to FPS cap
-        if (timestamp - lastFrameTime < frameInterval) return
-        lastFrameTime = timestamp
-
-        const video  = videoRef.current
-        const canvas = canvasRef.current
-
-        if (video && canvas && video.readyState === 4) {
-          canvas.width  = video.videoWidth  || 640
-          canvas.height = video.videoHeight || 480
-          const ctx = canvas.getContext('2d')
-          ctx.drawImage(video, 0, 0)
-
-          const b64 = canvas.toDataURL('image/jpeg', 0.6).split(',')[1]
-
-          ws.send(JSON.stringify({
-            type:       'frame',
-            session_id: session.session_id,
-            frame_id:   Date.now(),
-            image_b64:  b64,
-          }))
-        }
+      // 3. Capture loop at the server's target fps, with a monotonic timestamp per frame.
+      const tick = () => {
+        if (ws.readyState !== WebSocket.OPEN || !ready || inFlight) return
+        const video = videoRef.current, canvas = canvasRef.current
+        if (!video || !canvas || video.readyState !== 4) return
+        const scale = Math.min(1, MAX_WIDTH / (video.videoWidth || MAX_WIDTH))
+        canvas.width = Math.round((video.videoWidth || 640) * scale)
+        canvas.height = Math.round((video.videoHeight || 480) * scale)
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height)
+        const b64 = canvas.toDataURL('image/jpeg', 0.7).split(',')[1]
+        inFlight = true
+        sentAt = performance.now()
+        ws.send(JSON.stringify({ type: 'frame', ts: sentAt, image_b64: b64 }))
       }
-
-      intervalRef.current = requestAnimationFrame(captureLoop)
+      const fps = useSessionStore.getState().targetFps || 10
+      intervalRef.current = setInterval(tick, Math.round(1000 / fps))
+      driftTimerRef.current = setInterval(() => getDrift().then(store.setDrift).catch(() => {}), 5000)
 
     } catch (e) {
       setError(e.message)
@@ -133,39 +117,30 @@ export default function LiveMonitor() {
   }, [startCam, stopCam, store])
 
   const handleStop = useCallback(async () => {
-    cancelAnimationFrame(intervalRef.current)
-    const ws = store.ws
+    clearInterval(intervalRef.current)
+    clearInterval(driftTimerRef.current)
+    const ws = useSessionStore.getState().ws
     if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: 'close', session_id: store.sessionId }))
+      ws.send(JSON.stringify({ type: 'close' }))  // server replies with a summary and closes the session
       ws.close()
     }
     store.setWs(null)
     stopCam()
-    if (store.sessionId) {
-      try { await stopSession(store.sessionId) } catch { /* ignore */ }
-    }
     store.clearSession()
   }, [store, stopCam])
 
   // Cleanup on unmount
   useEffect(() => () => {
-    cancelAnimationFrame(intervalRef.current)
-    store.ws?.close()
+    clearInterval(intervalRef.current)
+    clearInterval(driftTimerRef.current)
+    useSessionStore.getState().ws?.close()
   }, [])
 
-  const stateColor = isDrowsy
-    ? 'var(--red)'
-    : store.currentState === 'alert'
-      ? 'var(--green)'
-      : 'var(--text-muted)'
-
-  const stateLabel = isBuffering
-    ? 'CALIBRATING...'
-    : isDrowsy
-      ? 'DROWSY'
-      : store.currentState === 'alert'
-        ? 'ALERT'
-        : 'STANDBY'
+  const ui = STATE_UI[store.currentState] || STATE_UI.idle
+  const stateColor = ui.color
+  const stateLabel = store.currentState === 'warming_up'
+    ? `CALIBRATING ${Math.round((store.warmup || 0) * 100)}%`
+    : ui.label
 
   return (
     <div style={{ padding: '24px', minHeight: '100vh' }}>
@@ -303,13 +278,13 @@ export default function LiveMonitor() {
                   formatter={(v) => [v?.toFixed(3), 'EAR']}
                   labelFormatter={() => ''}
                 />
-                <ReferenceLine y={0.25} stroke="rgba(255,59,59,0.5)" strokeDasharray="4 4" />
+                <ReferenceLine y={0.2} stroke="rgba(255,59,59,0.5)" strokeDasharray="4 4" />
                 <Line type="monotone" dataKey="v" dot={false} strokeWidth={2}
                   stroke="var(--cyan)" isAnimationActive={false} />
               </LineChart>
             </ResponsiveContainer>
             <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
-              Red dashed line = drowsiness threshold (EAR &lt; 0.25)
+              Window-mean EAR per prediction · red line = eye-closed threshold (EAR &lt; 0.20)
             </div>
           </div>
         </div>
@@ -337,9 +312,9 @@ export default function LiveMonitor() {
                 size={130}
               />
               <GaugeChart
-                value={store.currentConfidence ?? 0}
+                value={Math.max(0, Math.min(1, store.currentScore ?? 0))}
                 min={0} max={1}
-                label="Confidence" unit="score"
+                label="Model score" unit={store.threshold != null ? `thr ${store.threshold.toFixed(2)}` : 'score'}
                 danger={store.currentState === 'drowsy'}
                 size={130}
               />
@@ -360,8 +335,8 @@ export default function LiveMonitor() {
               {[
                 { label: 'Frames',      value: store.framesProcessed.toLocaleString() },
                 { label: 'Alerts',      value: store.alertsTriggered, highlight: store.alertsTriggered > 0 },
-                { label: 'Drift Score', value: store.overallDriftScore.toFixed(3) },
-                { label: 'State',       value: store.currentState.toUpperCase() },
+                { label: 'Drift (PSI)', value: store.overallDriftScore >= 0 ? store.overallDriftScore.toFixed(3) : 'n/a' },
+                { label: 'Input FPS',   value: (store.fps ?? 0).toFixed(1), highlight: store.currentState === 'degraded' },
               ].map(({ label, value, highlight }) => (
                 <div key={label} style={{
                   background: 'var(--bg-elevated)', padding: '10px 12px',
@@ -401,7 +376,7 @@ export default function LiveMonitor() {
                       <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>{alert.time}</span>
                     </div>
                     <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
-                      Confidence: {(alert.confidence * 100).toFixed(1)}%
+                      Model score: {alert.score?.toFixed(3)}
                     </div>
                   </div>
                 ))}

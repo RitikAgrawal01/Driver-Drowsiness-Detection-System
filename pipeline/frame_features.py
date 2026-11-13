@@ -20,11 +20,15 @@ def main():
             r = r._asdict()
             pts = {i: (r[f"x{i}"], r[f"y{i}"]) for i in USED_LANDMARKS} if r["face"] == 1 else None
             feats.append(frame_features(pts, int(r["width"]), int(r["height"])))
-        out = pd.concat([df[["video", "participant", "label", "t"]].reset_index(drop=True),
-                         pd.DataFrame(feats)], axis=1)
+        out = pd.concat(
+            [df[["video", "participant", "label", "t"]].reset_index(drop=True), pd.DataFrame(feats)], axis=1
+        )
         parts.append(out)
-        print(f"{f.stem:>9}: {len(out)} frames, median EAR {out['ear'].median():.3f}, "
-              f"median pitch/yaw/roll {out[['pitch', 'yaw', 'roll']].median().round(1).tolist()}", flush=True)
+        print(
+            f"{f.stem:>9}: {len(out)} frames, median EAR {out['ear'].median():.3f}, "
+            f"median pitch/yaw/roll {out[['pitch', 'yaw', 'roll']].median().round(1).tolist()}",
+            flush=True,
+        )
 
     frames = pd.concat(parts, ignore_index=True).sort_values(["video", "t"])
     frames.to_parquet(FRAME_FEATURES, index=False)

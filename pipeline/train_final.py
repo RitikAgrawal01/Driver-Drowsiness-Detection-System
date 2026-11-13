@@ -19,8 +19,7 @@ from mlflow.tracking import MlflowClient
 from ddd_core.config import REPO_ROOT, load_params
 from ddd_core.windows import FEATURE_SETS
 from pipeline.dataset import DATA_DIR, REPORTS_DIR, WINDOWS
-from pipeline.evaluation import (dvc_lock_hash, file_md5, flat, git_commit, mlflow_setup,
-                                 save_json)
+from pipeline.evaluation import dvc_lock_hash, file_md5, flat, git_commit, mlflow_setup, save_json
 from pipeline.models import fit_final, select
 from pipeline.pyfunc_model import DrowsinessModel
 
@@ -33,9 +32,12 @@ def drift_baseline(train: pd.DataFrame, feats: list, bins: int) -> dict:
         edges = np.unique(np.quantile(x, np.linspace(0, 1, bins + 1)))
         edges[0], edges[-1] = -np.inf, np.inf
         counts, _ = np.histogram(x, bins=edges)
-        out[c] = {"edges": [float(e) if np.isfinite(e) else (1e308 if e > 0 else -1e308) for e in edges],
-                  "proportions": (counts / counts.sum()).round(6).tolist(),
-                  "mean": float(x.mean()), "std": float(x.std())}
+        out[c] = {
+            "edges": [float(e) if np.isfinite(e) else (1e308 if e > 0 else -1e308) for e in edges],
+            "proportions": (counts / counts.sum()).round(6).tolist(),
+            "mean": float(x.mean()),
+            "std": float(x.std()),
+        }
     return out
 
 
@@ -63,24 +65,50 @@ def main():
     ml = params["mlflow"]
     mlflow_setup(ml["experiment"])
     with mlflow.start_run(run_name=f"final__{model}") as run:
-        mlflow.set_tags({"stage": "train_final", "git_commit": git_commit(), "gate": "passed",
-                         "deploy_reason": deploy["reason"], "ml_gate_passed": str(gate["ml_gate_passed"]),
-                         "dvc_windows_md5": dvc_lock_hash("data/windows.parquet"),
-                         "loso_metrics_md5": file_md5(metrics_path), "loso_run_key": deploy["run_key"]})
-        mlflow.log_params({"model": model, "feature_set": deploy["feature_set"], "features": ",".join(feats),
-                           "window_s": choice["window_s"], "threshold": round(choice["threshold"], 6),
-                           "n_estimators": choice["n_estimators"], "train_participants": 12,
-                           "train_windows": len(train), **{f"cfg_{k}": v for k, v in choice["config"].items()}})
+        mlflow.set_tags(
+            {
+                "stage": "train_final",
+                "git_commit": git_commit(),
+                "gate": "passed",
+                "deploy_reason": deploy["reason"],
+                "ml_gate_passed": str(gate["ml_gate_passed"]),
+                "dvc_windows_md5": dvc_lock_hash("data/windows.parquet"),
+                "loso_metrics_md5": file_md5(metrics_path),
+                "loso_run_key": deploy["run_key"],
+            }
+        )
+        mlflow.log_params(
+            {
+                "model": model,
+                "feature_set": deploy["feature_set"],
+                "features": ",".join(feats),
+                "window_s": choice["window_s"],
+                "threshold": round(choice["threshold"], 6),
+                "n_estimators": choice["n_estimators"],
+                "train_participants": 12,
+                "train_windows": len(train),
+                **{f"cfg_{k}": v for k, v in choice["config"].items()},
+            }
+        )
         mlflow.log_metrics(flat({"loso_pooled": loso["pooled"], "loso_pp_mean": loso["per_participant_mean"]}))
         mlflow.log_dict(baseline, "drift_baseline.json")
         example = train[feats].head(5)
         wrapped = DrowsinessModel(est, model, feats, choice["threshold"], choice["window_s"])
         info = mlflow.pyfunc.log_model(
-            "model", python_model=wrapped, code_path=[str(REPO_ROOT / "pipeline")],
-            input_example=example, signature=infer_signature(example, wrapped.predict(None, example)),
-            metadata={"window_s": choice["window_s"], "threshold": choice["threshold"],
-                      "features": feats, "model_type": model, "target_fps": params["extract"]["target_fps"]},
-            registered_model_name=ml["model_name"])
+            "model",
+            python_model=wrapped,
+            code_path=[str(REPO_ROOT / "pipeline")],
+            input_example=example,
+            signature=infer_signature(example, wrapped.predict(None, example)),
+            metadata={
+                "window_s": choice["window_s"],
+                "threshold": choice["threshold"],
+                "features": feats,
+                "model_type": model,
+                "target_fps": params["extract"]["target_fps"],
+            },
+            registered_model_name=ml["model_name"],
+        )
         client = MlflowClient()
         # mlflow 2.11's ModelInfo has no registered_model_version: look the version up by run id
         versions = client.search_model_versions(f"name='{ml['model_name']}' and run_id='{run.info.run_id}'")
@@ -88,13 +116,23 @@ def main():
         client.set_registered_model_alias(ml["model_name"], ml["alias"], str(version))
         print(f"registered {ml['model_name']} v{version} as @{ml['alias']} ({info.model_uri})")
 
-    result = {"model": model, "feature_set": deploy["feature_set"], "deploy_reason": deploy["reason"],
-              "ml_gate_passed": gate["ml_gate_passed"], "window_s": choice["window_s"],
-              "config": choice["config"], "n_estimators": choice["n_estimators"],
-              "threshold": round(choice["threshold"], 6), "selection_cv_auc": round(choice["inner_auc"], 4),
-              "train_windows": len(train), "mlflow_run_id": run.info.run_id,
-              "registered_model": ml["model_name"], "version": int(version), "alias": ml["alias"],
-              "reported_performance": "nested LOSO (reports/loso_metrics.json)"}
+    result = {
+        "model": model,
+        "feature_set": deploy["feature_set"],
+        "deploy_reason": deploy["reason"],
+        "ml_gate_passed": gate["ml_gate_passed"],
+        "window_s": choice["window_s"],
+        "config": choice["config"],
+        "n_estimators": choice["n_estimators"],
+        "threshold": round(choice["threshold"], 6),
+        "selection_cv_auc": round(choice["inner_auc"], 4),
+        "train_windows": len(train),
+        "mlflow_run_id": run.info.run_id,
+        "registered_model": ml["model_name"],
+        "version": int(version),
+        "alias": ml["alias"],
+        "reported_performance": "nested LOSO (reports/loso_metrics.json)",
+    }
     save_json(result, REPORTS_DIR / "final_model.json")
     print(json.dumps(result, indent=2))
 

@@ -17,14 +17,17 @@ USED_LANDMARKS = sorted(set(RIGHT_EYE + LEFT_EYE + MOUTH + POSE))
 # Generic 3D face in OpenCV camera convention (x right, y DOWN, z away from camera).
 # v1 used y-up model points against y-down image points (a reflection), which gave
 # pitch near +/-180 degrees for an upright face.
-FACE_3D = np.array([
-    [0.0, 0.0, 0.0],        # nose tip (1)
-    [0.0, 63.6, 12.5],      # chin (152)
-    [-43.3, -32.7, 26.0],   # right-eye outer corner (226), image left
-    [43.3, -32.7, 26.0],    # left-eye outer corner (446), image right
-    [-28.9, 28.9, 24.1],    # mouth corner (57)
-    [28.9, 28.9, 24.1],     # mouth corner (287)
-], dtype=np.float64)
+FACE_3D = np.array(
+    [
+        [0.0, 0.0, 0.0],  # nose tip (1)
+        [0.0, 63.6, 12.5],  # chin (152)
+        [-43.3, -32.7, 26.0],  # right-eye outer corner (226), image left
+        [43.3, -32.7, 26.0],  # left-eye outer corner (446), image right
+        [-28.9, 28.9, 24.1],  # mouth corner (57)
+        [28.9, 28.9, 24.1],  # mouth corner (287)
+    ],
+    dtype=np.float64,
+)
 
 NAN = float("nan")
 
@@ -59,9 +62,11 @@ def head_pose(pts: dict, w: int, h: int) -> tuple:
         return NAN, NAN, NAN
     r, _ = cv2.Rodrigues(rvec)
     sy = math.hypot(r[0, 0], r[1, 0])
-    return (math.degrees(math.atan2(r[2, 1], r[2, 2])),
-            math.degrees(math.atan2(-r[2, 0], sy)),
-            math.degrees(math.atan2(r[1, 0], r[0, 0])))
+    return (
+        math.degrees(math.atan2(r[2, 1], r[2, 2])),
+        math.degrees(math.atan2(-r[2, 0], sy)),
+        math.degrees(math.atan2(r[1, 0], r[0, 0])),
+    )
 
 
 def frame_features(pts: dict | None, w: int, h: int) -> dict:
@@ -73,7 +78,9 @@ def frame_features(pts: dict | None, w: int, h: int) -> dict:
         "face": 1,
         "ear": (eye_aspect_ratio(pts, RIGHT_EYE) + eye_aspect_ratio(pts, LEFT_EYE)) / 2.0,
         "mar": mouth_aspect_ratio(pts),
-        "pitch": pitch, "yaw": yaw, "roll": roll,
+        "pitch": pitch,
+        "yaw": yaw,
+        "roll": roll,
     }
 
 

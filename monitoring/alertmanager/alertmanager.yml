@@ -1,0 +1,23 @@
+# Alertmanager: only alerts labelled action=retrain go to the retrain webhook.
+# Operational alerts (errors, latency, services down) go to the "page" receiver, which here
+# logs them via the webhook's /notify endpoint (swap in Slack/email/PagerDuty in production).
+route:
+  receiver: page
+  group_by: ["alertname"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - matchers: ['action="retrain"']
+      receiver: retrain
+      repeat_interval: 12h
+
+receivers:
+  - name: page
+    webhook_configs:
+      - url: http://webhook:9095/notify
+        send_resolved: true
+  - name: retrain
+    webhook_configs:
+      - url: http://webhook:9095/webhook
+        send_resolved: false

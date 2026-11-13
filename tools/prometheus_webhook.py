@@ -1,238 +1,162 @@
 """
-tools/prometheus_webhook.py
-────────────────────────────
-Lightweight webhook server that receives Prometheus Alertmanager
-notifications and triggers the Airflow retraining DAG.
+tools/prometheus_webhook.py — Alertmanager -> Airflow bridge (runs as the `webhook` compose service).
 
-This bridges the gap between Prometheus firing a DataDriftDetected
-alert and Airflow automatically kicking off the retraining pipeline.
+  POST /webhook  Alertmanager "retrain" receiver: firing alerts labelled action=retrain trigger
+                 the ddd_retrain_pipeline DAG (once per cooldown window, params.yaml retrain.cooldown_hours)
+  POST /notify   Alertmanager "page" receiver: operational alerts are logged (never retrain)
+  POST /trigger  manual trigger for demos (requires X-Webhook-Token when WEBHOOK_TOKEN is set)
+  GET  /health, /metrics
 
-Architecture:
-  Prometheus → alert fires → Alertmanager → POST /webhook
-  → this server → POST Airflow /api/v1/dags/ddd_retrain_pipeline/dagRuns
-
-Usage:
-  python tools/prometheus_webhook.py          # starts on port 9095
-  python tools/prometheus_webhook.py --port 9095
-
-For demo purposes, you can also trigger manually:
-  curl -X POST http://127.0.0.1:9095/trigger \
-    -H "Content-Type: application/json" \
-    -d '{"reason": "manual_demo"}'
+v1 fixes: Prometheus now talks to Alertmanager (v1 posted Alertmanager-format alerts straight to
+this server on a path it did not serve); retraining is selected by label, not a hard-coded list
+that included HighErrorRate; credentials come only from the environment (v1 defaulted to admin/admin).
 """
 
-import argparse
+import base64
+import hmac
 import json
 import logging
 import os
+import time
+import urllib.error
+import urllib.request
 from datetime import datetime, timezone
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-import requests
+import yaml
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] — %(message)s",
-)
-logger = logging.getLogger("prometheus_webhook")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] webhook — %(message)s")
+log = logging.getLogger("webhook")
 
-AIRFLOW_URL     = os.getenv("AIRFLOW_URL",     "http://127.0.0.1:8080")
-AIRFLOW_USER    = os.getenv("AIRFLOW_USER",    "admin")
-AIRFLOW_PASS    = os.getenv("AIRFLOW_PASS",    "admin")
-AIRFLOW_DAG_ID  = "ddd_retrain_pipeline"
-
-# Alerts that should trigger retraining
-TRIGGER_ALERTS = {
-    "DataDriftDetected",
-    "HighErrorRate",
-    "EARFeatureDrift",
-    "PERCLOSFeatureDrift",
+DAG_ID = "ddd_retrain_pipeline"
+STATE = {
+    "last_trigger": 0.0,
+    "counts": {"received": 0, "triggered": 0, "suppressed_cooldown": 0, "trigger_failed": 0, "notified": 0},
 }
 
 
-def trigger_airflow_dag(reason: str, conf: dict = None) -> bool:
-    """
-    POST to Airflow REST API to trigger the retraining DAG.
+def cooldown_hours() -> float:
+    path = os.getenv("DDD_PARAMS", "params.yaml")
+    with open(path) as f:
+        return float(yaml.safe_load(f)["retrain"]["cooldown_hours"])
 
-    Args:
-        reason: human-readable reason for the trigger
-        conf:   optional DAG run config dict
 
-    Returns:
-        True if DAG was triggered successfully
-    """
-    dag_run_id = f"webhook__{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S')}"
+def select_retrain_alerts(payload: dict) -> list[str]:
+    """Names of FIRING alerts that ask for retraining (label action=retrain)."""
+    return sorted(
+        {
+            a.get("labels", {}).get("alertname", "unknown")
+            for a in payload.get("alerts", [])
+            if a.get("status") == "firing" and a.get("labels", {}).get("action") == "retrain"
+        }
+    )
 
-    payload = {
-        "dag_run_id": dag_run_id,
-        "conf": conf or {"retrain_reason": reason},
-        "note": f"Triggered by Prometheus webhook: {reason}",
-    }
 
+def cooldown_ok(last: float, now: float, hours: float) -> bool:
+    return now - last >= hours * 3600
+
+
+def trigger_airflow(reason: str, conf: dict) -> tuple[bool, str]:
+    url, user, pwd = os.getenv("AIRFLOW_URL"), os.getenv("AIRFLOW_USER"), os.getenv("AIRFLOW_PASSWORD")
+    if not (url and user and pwd):
+        return False, "AIRFLOW_URL / AIRFLOW_USER / AIRFLOW_PASSWORD not set"
+    run_id = f"webhook__{datetime.now(timezone.utc):%Y%m%dT%H%M%S}"
+    body = json.dumps({"dag_run_id": run_id, "conf": {"retrain_reason": reason, **conf}}).encode()
+    req = urllib.request.Request(
+        f"{url.rstrip('/')}/api/v1/dags/{DAG_ID}/dagRuns",
+        data=body,
+        method="POST",
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": "Basic " + base64.b64encode(f"{user}:{pwd}".encode()).decode(),
+        },
+    )
     try:
-        resp = requests.post(
-            f"{AIRFLOW_URL}/api/v1/dags/{AIRFLOW_DAG_ID}/dagRuns",
-            json=payload,
-            auth=(AIRFLOW_USER, AIRFLOW_PASS),
-            headers={"Content-Type": "application/json"},
-            timeout=10,
-        )
-
-        if resp.status_code in (200, 201):
-            data = resp.json()
-            logger.info(
-                f"✓ Airflow DAG triggered successfully\n"
-                f"  DAG ID   : {AIRFLOW_DAG_ID}\n"
-                f"  Run ID   : {data.get('dag_run_id', dag_run_id)}\n"
-                f"  Reason   : {reason}\n"
-                f"  State    : {data.get('state', 'queued')}"
-            )
-            return True
-        elif resp.status_code == 409:
-            logger.warning(
-                "DAG run already exists or DAG is paused. "
-                "Check Airflow UI to ensure the DAG is unpaused."
-            )
-            return False
-        else:
-            logger.error(
-                f"Failed to trigger DAG: HTTP {resp.status_code}\n"
-                f"  Response: {resp.text[:200]}"
-            )
-            return False
-
-    except requests.exceptions.ConnectionError:
-        logger.error(
-            f"Cannot connect to Airflow at {AIRFLOW_URL}. "
-            "Is Airflow running? Start with: make airflow-up"
-        )
-        return False
+        with urllib.request.urlopen(req, timeout=10) as r:
+            return True, f"{r.status} {run_id}"
+    except urllib.error.HTTPError as e:
+        return False, f"HTTP {e.code}: {e.read()[:200]!r}"
     except Exception as e:
-        logger.error(f"DAG trigger exception: {e}")
-        return False
+        return False, str(e)
 
 
-class WebhookHandler(BaseHTTPRequestHandler):
-    """HTTP request handler for Prometheus Alertmanager webhooks."""
+def metrics_text() -> str:
+    lines = []
+    for k, v in STATE["counts"].items():
+        lines += [f"# TYPE ddd_webhook_{k}_total counter", f"ddd_webhook_{k}_total {v}"]
+    return "\n".join(lines) + "\n"
 
-    def log_message(self, format, *args):
-        """Suppress default access log — we use structured logging instead."""
+
+class Handler(BaseHTTPRequestHandler):
+    def log_message(self, *args):
         pass
 
-    def _send_response(self, status: int, body: dict):
+    def _send(self, status: int, body, ctype="application/json"):
+        data = body.encode() if isinstance(body, str) else json.dumps(body).encode()
         self.send_response(status)
-        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Type", ctype)
         self.end_headers()
-        self.wfile.write(json.dumps(body).encode())
-
-    def do_POST(self):
-        """Handle POST requests from Prometheus Alertmanager or manual triggers."""
-
-        content_length = int(self.headers.get("Content-Length", 0))
-        body = self.rfile.read(content_length)
-
-        try:
-            data = json.loads(body) if body else {}
-        except json.JSONDecodeError:
-            self._send_response(400, {"error": "Invalid JSON"})
-            return
-
-        # ── Manual trigger endpoint ───────────────────────────────────────────
-        if self.path == "/trigger":
-            reason = data.get("reason", "manual_trigger")
-            conf   = data.get("conf", {})
-            logger.info(f"Manual trigger received: {reason}")
-            success = trigger_airflow_dag(reason, conf)
-            self._send_response(
-                200 if success else 500,
-                {"triggered": success, "reason": reason}
-            )
-            return
-
-        # ── Prometheus Alertmanager webhook ───────────────────────────────────
-        if self.path == "/webhook":
-            alerts = data.get("alerts", [])
-            if not alerts:
-                self._send_response(200, {"status": "no_alerts"})
-                return
-
-            triggered = False
-            for alert in alerts:
-                alert_name = alert.get("labels", {}).get("alertname", "")
-                status     = alert.get("status", "")  # "firing" or "resolved"
-
-                if status != "firing":
-                    continue
-
-                if alert_name in TRIGGER_ALERTS:
-                    logger.info(f"Prometheus alert firing: {alert_name}")
-                    reason = f"prometheus_alert:{alert_name}"
-                    conf = {
-                        "retrain_reason": reason,
-                        "alert_name":     alert_name,
-                        "alert_labels":   alert.get("labels", {}),
-                    }
-                    if trigger_airflow_dag(reason, conf):
-                        triggered = True
-                        break  # only trigger once per webhook call
-                else:
-                    logger.debug(f"Alert {alert_name} does not trigger retraining")
-
-            self._send_response(
-                200,
-                {"received": len(alerts), "triggered": triggered}
-            )
-            return
-
-        # ── Health check ──────────────────────────────────────────────────────
-        if self.path == "/health":
-            self._send_response(200, {"status": "ok", "service": "prometheus_webhook"})
-            return
-
-        self._send_response(404, {"error": f"Unknown path: {self.path}"})
+        self.wfile.write(data)
 
     def do_GET(self):
         if self.path == "/health":
-            self._send_response(200, {"status": "ok"})
+            return self._send(200, {"status": "ok"})
+        if self.path == "/metrics":
+            return self._send(200, metrics_text(), "text/plain; version=0.0.4")
+        self._send(404, {"error": "not found"})
+
+    def do_POST(self):
+        length = int(self.headers.get("Content-Length", 0))
+        try:
+            payload = json.loads(self.rfile.read(length) or b"{}")
+        except json.JSONDecodeError:
+            return self._send(400, {"error": "invalid JSON"})
+        STATE["counts"]["received"] += 1
+
+        if self.path == "/notify":
+            STATE["counts"]["notified"] += 1
+            for a in payload.get("alerts", []):
+                log.warning(
+                    "PAGE %s [%s] %s",
+                    a.get("labels", {}).get("alertname"),
+                    a.get("status"),
+                    a.get("annotations", {}).get("summary", ""),
+                )
+            return self._send(200, {"logged": len(payload.get("alerts", []))})
+
+        if self.path == "/trigger":
+            expected = os.getenv("WEBHOOK_TOKEN")
+            token = self.headers.get("X-Webhook-Token")
+            if expected and not (token and hmac.compare_digest(token, expected)):
+                return self._send(401, {"error": "invalid token"})
+            names = [payload.get("reason", "manual_trigger")]
+        elif self.path == "/webhook":
+            names = select_retrain_alerts(payload)
+            if not names:
+                return self._send(200, {"triggered": False, "reason": "no firing action=retrain alerts"})
         else:
-            self._send_response(404, {"error": "Not found"})
+            return self._send(404, {"error": f"unknown path {self.path}"})
+
+        now = time.time()
+        if self.path == "/webhook" and not cooldown_ok(STATE["last_trigger"], now, cooldown_hours()):
+            STATE["counts"]["suppressed_cooldown"] += 1
+            return self._send(200, {"triggered": False, "reason": "cooldown"})
+        ok, detail = trigger_airflow(";".join(names), {"alerts": names})
+        if ok:
+            STATE["last_trigger"] = now
+            STATE["counts"]["triggered"] += 1
+            log.info("triggered %s: %s (%s)", DAG_ID, names, detail)
+            return self._send(200, {"triggered": True, "detail": detail})
+        STATE["counts"]["trigger_failed"] += 1
+        log.error("trigger failed: %s", detail)
+        return self._send(502, {"triggered": False, "error": detail})  # Alertmanager will retry
 
 
-def run(port: int = 9095):
-    server = HTTPServer(("0.0.0.0", port), WebhookHandler)
-    logger.info(
-        f"\n{'='*55}\n"
-        f"Prometheus → Airflow Webhook Server\n"
-        f"  Listening  : http://0.0.0.0:{port}\n"
-        f"  Airflow    : {AIRFLOW_URL}\n"
-        f"  DAG        : {AIRFLOW_DAG_ID}\n"
-        f"  Triggers on: {', '.join(sorted(TRIGGER_ALERTS))}\n"
-        f"\n"
-        f"  Manual trigger:\n"
-        f"    curl -X POST http://127.0.0.1:{port}/trigger\n"
-        f"      -H 'Content-Type: application/json'\n"
-        f"      -d '{{\"reason\": \"demo\"}}'\n"
-        f"{'='*55}"
-    )
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        logger.info("Webhook server stopped")
-        server.server_close()
+def main():
+    port = int(os.getenv("WEBHOOK_PORT", "9095"))
+    log.info("listening on :%d (DAG %s)", port, DAG_ID)
+    ThreadingHTTPServer(("0.0.0.0", port), Handler).serve_forever()
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Prometheus → Airflow webhook bridge"
-    )
-    parser.add_argument("--port", type=int, default=9095)
-    parser.add_argument("--airflow-url", default=AIRFLOW_URL)
-    parser.add_argument("--airflow-user", default=AIRFLOW_USER)
-    parser.add_argument("--airflow-pass", default=AIRFLOW_PASS)
-    args = parser.parse_args()
-
-    AIRFLOW_URL  = args.airflow_url
-    AIRFLOW_USER = args.airflow_user
-    AIRFLOW_PASS = args.airflow_pass
-
-    run(args.port)
+    main()

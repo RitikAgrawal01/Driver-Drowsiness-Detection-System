@@ -1,147 +1,117 @@
 import { create } from 'zustand'
 
+// States sent by the backend (one 'status' message per frame):
+//   warming_up | alert | drowsy | no_face | degraded | error  (+ 'idle' locally)
+const MAX = 120
+
 export const useSessionStore = create((set, get) => ({
-  // Session
   sessionId: null,
   isActive: false,
+  windowS: null,
+  targetFps: 10,
+  modelVersion: null,
+
   framesProcessed: 0,
   alertsTriggered: 0,
+  currentState: 'idle',
+  alarm: false,
+  warmup: 0,
+  fps: 0,
+  secondsWithoutFace: 0,
+  lastError: null,
 
-  // Current prediction
-  currentState: 'idle',       // 'idle' | 'alert' | 'drowsy' | 'buffering'
-  currentConfidence: 0,
+  currentScore: null,
+  threshold: null,
   currentEAR: null,
   currentMAR: null,
   currentPERCLOS: null,
+  blinkRate: null,
 
-  // History (last 120 data points for charts)
-  earHistory:        [],
-  confidenceHistory: [],
-  latencyHistory:    [],
-  driftHistory:      [],
-
-  // Alert log
+  earHistory: [],
+  confidenceHistory: [],   // model score history (name kept for the dashboard)
+  latencyHistory: [],
+  driftHistory: [],
   alertLog: [],
 
-  // Drift
-  overallDriftScore: 0,
+  overallDriftScore: -1,
   featureDriftScores: {},
+  driftThreshold: null,   // from the backend (params.yaml drift.psi_threshold)
 
-  // KEPT for BroadcastChannel compatibility but no longer used for UI logic
-  drowsyBuffer: 0,
-  alertBuffer: 0,
-
-  // WebSocket ref
   ws: null,
 
-  // Actions
-  setSession: (id) => set({ sessionId: id, isActive: true, framesProcessed: 0, alertsTriggered: 0 }),
-  clearSession: () => set({ sessionId: null, isActive: false, currentState: 'idle' }),
-
   setWs: (ws) => set({ ws }),
+  clearSession: () => set({ sessionId: null, isActive: false, currentState: 'idle', alarm: false }),
+
+  setDrift: (d) => {
+    if (!d || d.overall === undefined) return
+    const now = Date.now()
+    set((s) => ({
+      driftThreshold: d.threshold ?? s.driftThreshold,
+      overallDriftScore: d.overall,
+      featureDriftScores: d.features || {},
+      driftHistory: d.overall >= 0 ? [...s.driftHistory, { t: now, v: d.overall }].slice(-MAX) : s.driftHistory,
+    }))
+  },
 
   handleWsMessage: (msg) => {
-    const state = get()
+    const s = get()
     const now = Date.now()
-    const MAX = 120
-
     switch (msg.type) {
-
-      case 'prediction': {
-        const ear = msg.features?.ear_mean ?? null
-
-        const newEarHistory  = [...state.earHistory,        { t: now, v: ear }].slice(-MAX)
-        const newConfHistory = [...state.confidenceHistory, { t: now, v: msg.confidence }].slice(-MAX)
-        const newLatHistory  = [...state.latencyHistory,    { t: now, v: msg.inference_latency_ms }].slice(-MAX)
-
-        let updatedAlertLog       = state.alertLog
-        let updatedAlertsTriggered = state.alertsTriggered
-
-        if (msg.new_alert) {
-          // CHANGED: was triggered by frontend re-buffer reaching 15.
-          // Now triggered by backend's new_alert flag (single edge event).
-          const newEntry = {
-            id: now,
-            time: new Date().toLocaleTimeString(),
-            confidence: msg.confidence,
-            message: 'Drowsiness Detected',
-          }
-          updatedAlertLog       = [newEntry, ...state.alertLog].slice(0, 20)
-          updatedAlertsTriggered = state.alertsTriggered + 1
+      case 'init_ack':
+        set({ sessionId: msg.session_id, isActive: true, windowS: msg.window_s,
+              targetFps: msg.target_fps, modelVersion: msg.model_version, currentState: 'warming_up' })
+        break
+      case 'status': {
+        const f = msg.features || {}
+        const patch = {
+          currentState: msg.state, alarm: msg.alarm, warmup: msg.warmup, fps: msg.fps,
+          secondsWithoutFace: msg.seconds_without_face, lastError: msg.error || null,
+          framesProcessed: s.framesProcessed + (msg.processed ? 1 : 0),
         }
-
-        set({
-          // CHANGED: was 'nextState' computed from frontend buffers.
-          // Now directly uses msg.state from backend.
-          currentState:      msg.state,
-          currentConfidence: msg.confidence,
-          currentEAR:        ear,
-          currentMAR:        msg.features?.mar_mean  ?? null,
-          currentPERCLOS:    msg.features?.perclos   ?? null,
-          framesProcessed:   state.framesProcessed + 1,
-          earHistory:        newEarHistory,
-          confidenceHistory: newConfHistory,
-          latencyHistory:    newLatHistory,
-          alertLog:          updatedAlertLog,
-          alertsTriggered:   updatedAlertsTriggered,
-        })
+        if (msg.predicted) {
+          patch.currentScore = msg.score
+          patch.threshold = msg.threshold
+          patch.currentEAR = f.ear_mean ?? null
+          patch.currentMAR = f.mar_mean ?? null
+          patch.currentPERCLOS = f.perclos ?? null
+          patch.blinkRate = f.blink_rate_pm ?? null
+          patch.earHistory = [...s.earHistory, { t: now, v: f.ear_mean }].slice(-MAX)
+          patch.confidenceHistory = [...s.confidenceHistory, { t: now, v: msg.score }].slice(-MAX)
+        }
+        if (msg.new_alarm) {
+          patch.alertLog = [{ id: now, time: new Date().toLocaleTimeString(), score: msg.score }, ...s.alertLog].slice(0, 20)
+          patch.alertsTriggered = s.alertsTriggered + 1
+        }
+        set(patch)
         break
       }
-
-      // 'alert' messages from backend are currently informational only
-      case 'alert': {
+      case 'error':
+        set({ lastError: msg.message, ...(msg.state ? { currentState: msg.state } : {}) })
         break
-      }
-
-      case 'drift_update': {
-        set({
-          overallDriftScore:  msg.overall_drift_score,
-          featureDriftScores: msg.feature_scores || {},
-          driftHistory: [...state.driftHistory, { t: now, v: msg.overall_drift_score }].slice(-MAX),
-        })
+      default:
         break
-      }
-
-      case 'buffering': {
-        set({ currentState: 'buffering' })
-        break
-      }
-
-      default: break
     }
   },
 
+  recordLatency: (ms) => set((s) => ({ latencyHistory: [...s.latencyHistory, { t: Date.now(), v: ms }].slice(-MAX) })),
+
   reset: () => set({
-    earHistory: [], confidenceHistory: [], latencyHistory: [],
-    driftHistory: [], alertLog: [], framesProcessed: 0,
-    alertsTriggered: 0, currentState: 'idle', overallDriftScore: 0,
-    // KEPT for compat — reset to zero
-    drowsyBuffer: 0,
-    alertBuffer: 0,
+    earHistory: [], confidenceHistory: [], latencyHistory: [], driftHistory: [], alertLog: [],
+    framesProcessed: 0, alertsTriggered: 0, currentState: 'idle', alarm: false, overallDriftScore: -1,
+    currentScore: null, currentEAR: null, currentMAR: null, currentPERCLOS: null, lastError: null,
   }),
 }))
 
-
-// ============================================================================
-// MULTI-TAB SYNC via BroadcastChannel
-// Only the tab with the active WebSocket broadcasts; others mirror it.
-// ============================================================================
-const syncChannel = new BroadcastChannel('ddd_state_sync')
-
-syncChannel.onmessage = (event) => {
-  const currentState = useSessionStore.getState()
-  if (!currentState.ws) {
-    useSessionStore.setState(event.data)
+// Multi-tab mirror: only the tab holding the WebSocket broadcasts; other tabs display it.
+const syncChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('ddd_state_sync') : null
+if (syncChannel) {
+  syncChannel.onmessage = (event) => {
+    if (!useSessionStore.getState().ws) useSessionStore.setState(event.data)
   }
+  useSessionStore.subscribe((state) => {
+    if (state.ws && state.isActive) {
+      syncChannel.postMessage(Object.fromEntries(
+        Object.entries(state).filter(([k, v]) => typeof v !== 'function' && k !== 'ws')))
+    }
+  })
 }
-
-useSessionStore.subscribe((state) => {
-  if (state.ws && state.isActive) {
-    const serializableState = Object.fromEntries(
-      Object.entries(state).filter(([key, value]) =>
-        typeof value !== 'function' && key !== 'ws'
-      )
-    )
-    syncChannel.postMessage(serializableState)
-  }
-})

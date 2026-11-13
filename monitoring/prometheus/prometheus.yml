@@ -4,18 +4,16 @@ global:
   scrape_timeout: 8s
 
 rule_files:
-  - "alert_rules.yml"
+  - "alert_rules.yml"   # generated from params.yaml by scripts/render_alert_rules.py
 
-# ── Alertmanager (routes firing alerts to webhook server) ─────────────────────
+# Prometheus -> Alertmanager (grouping, de-duplication, routing) -> webhook / pages.
+# v1 pointed this straight at the webhook, which does not speak the Alertmanager API.
 alerting:
   alertmanagers:
     - static_configs:
-        - targets:
-            - "host.docker.internal:9095"   # webhook server running on host
-      timeout: 10s
+        - targets: ["alertmanager:9093"]
 
 scrape_configs:
-
   - job_name: "prometheus"
     static_configs:
       - targets: ["localhost:9090"]
@@ -23,11 +21,11 @@ scrape_configs:
   - job_name: "ddd_backend"
     static_configs:
       - targets: ["backend:8000"]
-    metrics_path: /metrics
-    scrape_interval: 10s
 
   - job_name: "ddd_model_server"
     static_configs:
       - targets: ["model_server:8001"]
-    metrics_path: /metrics
-    scrape_interval: 10s
+
+  - job_name: "ddd_webhook"
+    static_configs:
+      - targets: ["webhook:9095"]

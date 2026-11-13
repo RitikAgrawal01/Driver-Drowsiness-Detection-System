@@ -7,7 +7,6 @@ All modules import get_logger() from here.
 """
 
 import logging
-import os
 import sys
 from pathlib import Path
 
@@ -30,6 +29,7 @@ def setup_logging(log_level: str = "INFO", environment: str = "development"):
     # Rotating file handler
     try:
         from logging.handlers import RotatingFileHandler
+
         file_handler = RotatingFileHandler(
             "logs/backend/backend.log",
             maxBytes=10 * 1024 * 1024,  # 10 MB

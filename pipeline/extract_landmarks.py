@@ -76,8 +76,15 @@ def process_video(args) -> dict:
             h, w = frame.shape[:2]
 
         res = mesh.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-        row = {"video": name, "participant": participant, "label": label,
-               "t": round(t, 3), "width": w, "height": h, "face": 0}
+        row = {
+            "video": name,
+            "participant": participant,
+            "label": label,
+            "t": round(t, 3),
+            "width": w,
+            "height": h,
+            "face": 0,
+        }
         if res.multi_face_landmarks:
             lm = res.multi_face_landmarks[0].landmark
             row["face"] = 1
@@ -99,11 +106,15 @@ def process_video(args) -> dict:
     df.to_csv(LANDMARKS_DIR / f"{name}.csv", index=False)
     n, faces = len(df), int(df["face"].sum()) if len(df) else 0
     return {
-        "video": name, "participant": participant, "label": label,
-        "source_fps": round(src_fps, 2), "rotation_meta": rotation,
+        "video": name,
+        "participant": participant,
+        "label": label,
+        "source_fps": round(src_fps, 2),
+        "rotation_meta": rotation,
         "frame_size_after_rotation": [int(df["width"].iloc[0]), int(df["height"].iloc[0])] if n else None,
         "duration_s": float(df["t"].max()) if n else 0.0,
-        "frames": n, "faces": faces,
+        "frames": n,
+        "faces": faces,
         "detection_rate_pct": round(100 * faces / max(n, 1), 2),
         "elapsed_s": round(time.time() - t0, 1),
     }
@@ -130,16 +141,21 @@ def main():
     with ctx.Pool(cfg["workers"]) as pool:
         results = []
         for r in pool.imap_unordered(process_video, [(v, cfg, args.limit_seconds) for v in videos]):
-            print(f"{r['video']:>9}: {r['faces']}/{r['frames']} faces ({r['detection_rate_pct']}%), "
-                  f"rot {r['rotation_meta']}, {r['elapsed_s']} s", flush=True)
+            print(
+                f"{r['video']:>9}: {r['faces']}/{r['frames']} faces ({r['detection_rate_pct']}%), "
+                f"rot {r['rotation_meta']}, {r['elapsed_s']} s",
+                flush=True,
+            )
             results.append(r)
 
     results.sort(key=lambda r: (r["participant"], r["label"]))
     frames = sum(r["frames"] for r in results)
     faces = sum(r["faces"] for r in results)
     summary = {
-        "target_fps": cfg["target_fps"], "videos": len(results),
-        "frames": frames, "faces": faces,
+        "target_fps": cfg["target_fps"],
+        "videos": len(results),
+        "frames": frames,
+        "faces": faces,
         "detection_rate_pct": round(100 * faces / max(frames, 1), 2),
         "elapsed_s": round(time.time() - t0, 1),
         "per_video": results,

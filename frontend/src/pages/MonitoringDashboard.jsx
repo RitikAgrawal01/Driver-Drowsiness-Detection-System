@@ -13,8 +13,9 @@ const FEATURE_COLORS = {
 }
 
 export default function MonitoringDashboard() {
-  const { driftHistory, featureDriftScores, overallDriftScore, latencyHistory, confidenceHistory } = useSessionStore()
-  const isDrifting = overallDriftScore > 0.15
+  const { driftHistory, featureDriftScores, overallDriftScore, latencyHistory, confidenceHistory, driftThreshold } = useSessionStore()
+  const thr = driftThreshold ?? 0.25
+  const isDrifting = overallDriftScore > thr
   const [grafanaLoaded, setGrafanaLoaded] = useState(false)
 
   const featureDriftData = Object.entries(featureDriftScores).map(([k, v]) => ({
@@ -64,7 +65,7 @@ export default function MonitoringDashboard() {
           <AlertTriangle size={18} color="var(--red)" />
           <div>
             <div style={{ color: 'var(--red)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13 }}>
-              DATA DRIFT DETECTED — Score: {overallDriftScore.toFixed(4)} (threshold: 0.15)
+              DATA DRIFT DETECTED — max PSI {overallDriftScore.toFixed(3)} (threshold {thr})
             </div>
             <div style={{ color: 'var(--text-secondary)', fontSize: 11, marginTop: 2 }}>
               Feature distributions have shifted from training baseline. Consider triggering dag_retrain in Airflow.
@@ -109,13 +110,13 @@ export default function MonitoringDashboard() {
             color: isDrifting ? 'var(--red)' : 'var(--text-primary)',
             lineHeight: 1, marginBottom: 10,
           }}>
-            {overallDriftScore.toFixed(4)}
+            {overallDriftScore >= 0 ? overallDriftScore.toFixed(3) : 'n/a'}
           </div>
           <ResponsiveContainer width="100%" height={80}>
             <LineChart data={driftHistory}>
               <XAxis dataKey="t" hide />
-              <YAxis domain={[0, 0.3]} hide />
-              <ReferenceLine y={0.15} stroke="rgba(255,59,59,0.5)" strokeDasharray="4 4" />
+              <YAxis domain={[0, 1]} hide />
+              <ReferenceLine y={thr} stroke="rgba(255,59,59,0.5)" strokeDasharray="4 4" />
               <Line type="monotone" dataKey="v" dot={false} strokeWidth={2}
                 stroke={isDrifting ? 'var(--red)' : 'var(--cyan)'}
                 isAnimationActive={false} />

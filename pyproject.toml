@@ -1,0 +1,14 @@
+[tool.black]
+line-length = 120
+target-version = ["py311"]
+extend-exclude = "(\\.venv|frontend|data|mlartifacts|mlflow_temp)"
+
+[tool.isort]
+profile = "black"
+line_length = 120
+skip_gitignore = true
+known_first_party = ["ddd_core", "pipeline", "analysis", "backend", "model_server", "ddd_dag_utils"]
+
+[tool.coverage.run]
+source = ["ddd_core", "pipeline", "backend", "model_server", "tools", "airflow/dags"]
+omit = ["pipeline/extract_landmarks.py", "pipeline/report.py", "airflow/dags/dag_*.py"]

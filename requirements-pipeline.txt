@@ -1,0 +1,19 @@
+# Training pipeline + shared code (ddd_core, pipeline/, analysis/), pinned to the versions that
+# produced reports/RESULTS.md. Used by the Airflow image, CI and local runs.
+# MediaPipe is installed separately WITHOUT deps (it would pull opencv-contrib and jax):
+#   pip install -r requirements-pipeline.txt && pip install --no-deps mediapipe==0.10.11
+numpy==1.26.4
+pandas==2.2.2
+pyarrow==15.0.2
+scikit-learn==1.4.2
+xgboost==2.0.3
+joblib==1.4.0
+scipy==1.13.0
+matplotlib==3.10.8
+mlflow==2.11.1
+pyyaml==6.0.3
+opencv-python-headless==4.11.0.86
+absl-py==2.4.0
+attrs==23.2.0
+flatbuffers==25.12.19
+protobuf==3.20.3

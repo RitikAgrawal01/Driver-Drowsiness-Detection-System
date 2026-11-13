@@ -8,8 +8,14 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import (accuracy_score, average_precision_score, f1_score,
-                             precision_score, recall_score, roc_auc_score)
+from sklearn.metrics import (
+    accuracy_score,
+    average_precision_score,
+    f1_score,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+)
 
 from ddd_core.config import REPO_ROOT
 
@@ -63,6 +69,7 @@ def summarize(pred_df: pd.DataFrame) -> tuple[dict, pd.DataFrame]:
 def mlflow_setup(experiment: str) -> None:
     """Log to the MLflow server named by MLFLOW_TRACKING_URI (infra setting, from .env / run script)."""
     import mlflow
+
     if not os.getenv("MLFLOW_TRACKING_URI"):
         raise SystemExit("MLFLOW_TRACKING_URI is not set (e.g. http://localhost:5000). Refusing to log nowhere.")
     mlflow.set_experiment(experiment)
@@ -76,6 +83,7 @@ def git_commit() -> str:
 def dvc_lock_hash(path: str) -> str:
     """md5 that dvc.lock records for an output (real data lineage for MLflow tags)."""
     import yaml
+
     lock = REPO_ROOT / "dvc.lock"
     if not lock.exists():
         return "no_dvc_lock"

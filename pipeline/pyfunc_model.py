@@ -9,8 +9,8 @@ import pandas as pd
 
 class DrowsinessModel(mlflow.pyfunc.PythonModel):
     def __init__(self, estimator, model_type: str, features: list, threshold: float, window_s: int):
-        self.estimator = estimator          # None for the rule
-        self.model_type = model_type        # "rule" | "logreg" | "svm" | "xgboost"
+        self.estimator = estimator  # None for the rule
+        self.model_type = model_type  # "rule" | "logreg" | "svm" | "xgboost"
         self.features = list(features)
         self.threshold = float(threshold)
         self.window_s = int(window_s)

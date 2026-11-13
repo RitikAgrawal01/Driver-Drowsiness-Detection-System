@@ -25,6 +25,7 @@ def current_champion(name: str, alias: str) -> dict:
     """{'status': 'none'} | {'status': 'ok', ...}; raises if MLflow is unreachable."""
     from mlflow.exceptions import MlflowException
     from mlflow.tracking import MlflowClient
+
     client = MlflowClient()
     try:
         mv = client.get_model_version_by_alias(name, alias)
@@ -33,10 +34,13 @@ def current_champion(name: str, alias: str) -> dict:
             return {"status": "none"}
         raise
     run = client.get_run(mv.run_id)
-    return {"status": "ok", "version": int(mv.version),
-            "pp_auc": run.data.metrics.get("loso_pp_mean_roc_auc"),
-            "loso_md5": run.data.tags.get("loso_metrics_md5"),
-            "run_key": run.data.tags.get("loso_run_key")}
+    return {
+        "status": "ok",
+        "version": int(mv.version),
+        "pp_auc": run.data.metrics.get("loso_pp_mean_roc_auc"),
+        "loso_md5": run.data.tags.get("loso_metrics_md5"),
+        "run_key": run.data.tags.get("loso_run_key"),
+    }
 
 
 def champion_check(run_key: str, pp_auc: float, champ: dict | None, loso_md5: str, min_gain: float) -> dict:
@@ -46,8 +50,16 @@ def champion_check(run_key: str, pp_auc: float, champ: dict | None, loso_md5: st
         return {"passed": True, "note": "no registered champion yet (first model)"}
     if champ["loso_md5"] == loso_md5 and champ.get("run_key") == run_key:
         return {"passed": True, "note": f"candidate IS champion v{champ['version']}"}
-    return {"champion_version": champ["version"], "champion_pp_auc": champ["pp_auc"], "required_gain": min_gain,
-            "passed": champ["pp_auc"] is not None and pp_auc > champ["pp_auc"] + min_gain}
+    same_score = champ["pp_auc"] is not None and abs(pp_auc - champ["pp_auc"]) < 1e-9
+    if champ.get("run_key") == run_key and same_score:
+        # a re-run that reproduces the champion exactly (same model family, same LOSO score)
+        return {"passed": True, "note": f"reproduces champion v{champ['version']} exactly"}
+    return {
+        "champion_version": champ["version"],
+        "champion_pp_auc": champ["pp_auc"],
+        "required_gain": min_gain,
+        "passed": champ["pp_auc"] is not None and pp_auc > champ["pp_auc"] + min_gain,
+    }
 
 
 def main():
@@ -73,8 +85,11 @@ def main():
 
     ml_checks = {
         "beats_baseline": {"candidate_pp_auc": cand_auc, "baseline_pp_auc": base_auc, "passed": cand_auc > base_auc},
-        "min_pooled_auc": {"candidate_pooled_auc": cand["pooled"]["roc_auc"], "required": g["min_pooled_roc_auc"],
-                           "passed": cand["pooled"]["roc_auc"] >= g["min_pooled_roc_auc"]},
+        "min_pooled_auc": {
+            "candidate_pooled_auc": cand["pooled"]["roc_auc"],
+            "required": g["min_pooled_roc_auc"],
+            "passed": cand["pooled"]["roc_auc"] >= g["min_pooled_roc_auc"],
+        },
         "beats_champion": champion_check(cand_key, cand_auc, champ, loso_md5, g["min_gain_over_champion"]),
     }
     ml_passed = all(c["passed"] for c in ml_checks.values())
@@ -82,18 +97,29 @@ def main():
 
     deploy = None
     if ml_passed:
-        deploy = {"model": cand_key.split("__")[0], "feature_set": main_set, "run_key": cand_key,
-                  "reason": "ML candidate passed the gate"}
+        deploy = {
+            "model": cand_key.split("__")[0],
+            "feature_set": main_set,
+            "run_key": cand_key,
+            "reason": "ML candidate passed the gate",
+        }
     elif g.get("deploy_baseline_if_ml_fails"):
         base_checks = {
-            "min_pooled_auc": {"baseline_pooled_auc": base["pooled"]["roc_auc"], "required": g["min_pooled_roc_auc"],
-                               "passed": base["pooled"]["roc_auc"] >= g["min_pooled_roc_auc"]},
+            "min_pooled_auc": {
+                "baseline_pooled_auc": base["pooled"]["roc_auc"],
+                "required": g["min_pooled_roc_auc"],
+                "passed": base["pooled"]["roc_auc"] >= g["min_pooled_roc_auc"],
+            },
             "beats_champion": champion_check(base_key, base_auc, champ, loso_md5, g["min_gain_over_champion"]),
         }
         result["baseline_checks"] = base_checks
         if all(c["passed"] for c in base_checks.values()):
-            deploy = {"model": "rule", "feature_set": "perclos_only", "run_key": base_key,
-                      "reason": "ML candidate failed; deploying the PERCLOS rule baseline (policy)"}
+            deploy = {
+                "model": "rule",
+                "feature_set": "perclos_only",
+                "run_key": base_key,
+                "reason": "ML candidate failed; deploying the PERCLOS rule baseline (policy)",
+            }
 
     result["deploy"] = deploy
     result["passed"] = deploy is not None

@@ -1,280 +1,207 @@
-version: "3.9"
+# ═══════════════════════════════════════════════════════════════════════════════
+# Driver Drowsiness Detection — Docker Compose (v2)
+#
+#   frontend      React (Vite -> Nginx)                         :3000
+#   backend       FastAPI + WebSocket + MediaPipe               :8000
+#   model_server  FastAPI, MLflow pyfunc @champion              :8001
+#   mlflow        tracking + registry (artifacts proxied)       :5000
+#   prometheus    metrics + alert rules (generated from params) :9090
+#   alertmanager  routing: action=retrain -> webhook, else page :9093
+#   webhook       Alertmanager -> Airflow bridge                (internal)
+#   grafana       dashboards                                    :3001
+#   airflow       runs `dvc repro` on the mounted repo          :8080  (profile: airflow)
+#
+#   python scripts/init_env.py          # once: .env with random secrets
+#   docker compose up -d --build
+#   docker compose --profile airflow up -d --build
+#
+# Settings: params.yaml (mounted read-only into every service) = behaviour; .env = infrastructure.
+# ═══════════════════════════════════════════════════════════════════════════════
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Driver Drowsiness Detection System — Docker Compose
-#
-# Services:
-#   1. frontend      React app (Vite → Nginx)           port 3000
-#   2. backend       FastAPI main API + WebSocket        port 8000
-#   3. model_server  FastAPI inference + MLflow loader   port 8001
-#   4. mlflow        Experiment tracking server          port 5000
-#   5. prometheus    Metrics collection                  port 9090
-#   6. grafana       Real-time dashboards                port 3001
-#   7. airflow       Pipeline orchestration (--profile)  port 8080
-#
-# Quick start (core services):
-#   docker-compose up --build -d
-#
-# With Airflow:
-#   docker-compose --profile airflow up --build -d
-#
-# Logs:
-#   docker-compose logs -f backend
-#   docker-compose logs -f model_server
-# ═══════════════════════════════════════════════════════════════════════════════
+name: ddd
 
 networks:
   ddd_network:
     driver: bridge
 
 volumes:
-  mlflow_artifacts:    # MLflow model artifacts
-  mlflow_db:           # MLflow SQLite database
-  prometheus_data:     # Prometheus time-series data
-  grafana_data:        # Grafana dashboards + config
-  airflow_logs:        # Airflow task logs
-  dvc_remote:          # Local DVC remote storage
+  mlflow_artifacts:
+  mlflow_db:
+  prometheus_data:
+  alertmanager_data:
+  grafana_data:
+  airflow_home:
 
-# ─────────────────────────────────────────────────────────────────────────────
+x-params: &params ./params.yaml:/app/params.yaml:ro
+
 services:
 
-  # ── 1. Frontend (React + Nginx) ─────────────────────────────────────────────
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
       args:
-        # Changed to 127.0.0.1 to permanently bypass Windows WSL IPv6 bugs
-        VITE_BACKEND_URL: http://127.0.0.1:8000
-        VITE_WS_URL: ws://127.0.0.1:8000
-        VITE_GRAFANA_URL: http://127.0.0.1:3001
-        VITE_MLFLOW_URL: http://127.0.0.1:5000
-        VITE_AIRFLOW_URL: http://127.0.0.1:8080
-        VITE_PROMETHEUS_URL: http://127.0.0.1:9090
+        VITE_BACKEND_URL: http://127.0.0.1:${BACKEND_PORT:-8000}
+        VITE_WS_URL: ws://127.0.0.1:${BACKEND_PORT:-8000}
+        VITE_GRAFANA_URL: http://127.0.0.1:${GRAFANA_PORT:-3001}
+        VITE_MLFLOW_URL: http://127.0.0.1:${MLFLOW_PORT:-5000}
+        VITE_AIRFLOW_URL: http://127.0.0.1:${AIRFLOW_PORT:-8080}
+        VITE_PROMETHEUS_URL: http://127.0.0.1:${PROMETHEUS_PORT:-9090}
     container_name: ddd_frontend
-    ports:
-      - "${FRONTEND_PORT:-3000}:80"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+    ports: ["${FRONTEND_PORT:-3000}:80"]
     depends_on:
-      backend:
-        condition: service_healthy
-    networks:
-      - ddd_network
+      backend: {condition: service_healthy}
+    networks: [ddd_network]
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:80"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
 
-  # ── 2. Backend (FastAPI) ─────────────────────────────────────────────────────
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    build: {context: ., dockerfile: backend/Dockerfile}
     container_name: ddd_backend
-    ports:
-      - "${BACKEND_PORT:-8000}:8000"
+    ports: ["${BACKEND_PORT:-8000}:8000"]
     environment:
-      - MODEL_SERVER_URL=http://model_server:8001
-      - MLFLOW_TRACKING_URI=http://mlflow:5000
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
-      - ENVIRONMENT=${ENVIRONMENT:-production}
-      - SLIDING_WINDOW_SIZE=${SLIDING_WINDOW_SIZE:-30}
-      - CONFIDENCE_THRESHOLD=${CONFIDENCE_THRESHOLD:-0.7}
-      - DRIFT_SCORE_THRESHOLD=${DRIFT_SCORE_THRESHOLD:-0.15}
-      - BASELINE_JSON_PATH=/app/data/features/baseline.json
-      - CORS_ORIGINS=["http://localhost:3000", "http://127.0.0.1:3000", "http://frontend:80"]
-    env_file:
-      - .env
-    volumes:
-      # Mount baseline.json for drift detection (read-only)
-      - ./data/features/baseline.json:/app/data/features/baseline.json:ro
-      # Persist logs
-      - ./logs/backend:/app/logs/backend
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
+      MODEL_SERVER_URL: http://model_server:8001
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      AIRFLOW_URL: http://airflow:8080
+      AIRFLOW_USER: ${AIRFLOW_ADMIN_USER}
+      AIRFLOW_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+    volumes: [*params]
     depends_on:
-      model_server:
-        condition: service_healthy
-      mlflow:
-        condition: service_started
-    networks:
-      - ddd_network
+      model_server: {condition: service_healthy}
+    networks: [ddd_network]
     restart: unless-stopped
 
-  # ── 3. Model Server (FastAPI + MLflow model) ─────────────────────────────────
   model_server:
-    build:
-      context: ./model_server
-      dockerfile: Dockerfile
+    build: {context: ., dockerfile: model_server/Dockerfile}
     container_name: ddd_model_server
-    ports:
-      - "${MODEL_SERVER_PORT:-8001}:8001"
+    ports: ["${MODEL_SERVER_PORT:-8001}:8001"]
     environment:
-      - MLFLOW_TRACKING_URI=http://mlflow:5000
-      - MLFLOW_MODEL_NAME=${MLFLOW_MODEL_NAME:-drowsiness_classifier}
-      - MLFLOW_MODEL_STAGE=${MLFLOW_MODEL_STAGE:-Production}
-      - CONFIDENCE_THRESHOLD=${CONFIDENCE_THRESHOLD:-0.7}
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
-      # Fallback pickle paths (if MLflow not yet populated)
-      - XGB_MODEL_OUTPUT=/app/models/xgboost_model.pkl
-      - SVM_MODEL_OUTPUT=/app/models/svm_model.pkl
-    volumes:
-      # Mount trained model files
-      - ./models:/app/models:ro
-      # MLflow artifacts volume
-      - mlflow_artifacts:/app/mlartifacts
-      - ./logs/model_server:/app/logs/model_server
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      ADMIN_TOKEN: ${ADMIN_TOKEN}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes: [*params]
     depends_on:
-      mlflow:
-        condition: service_started
-    networks:
-      - ddd_network
+      mlflow: {condition: service_healthy}
+    networks: [ddd_network]
     restart: unless-stopped
 
-  # ── 4. MLflow Tracking Server ────────────────────────────────────────────────
   mlflow:
     image: ghcr.io/mlflow/mlflow:v2.11.1
     container_name: ddd_mlflow
-    ports:
-      - "${MLFLOW_PORT:-5000}:5000"
+    ports: ["${MLFLOW_PORT:-5000}:5000"]
+    # Artifacts are PROXIED through the server (mlflow-artifacts:/), so clients never need the
+    # server's disk. v1 used a plain local path, which made every client write locally.
     command: >
-      mlflow server
-      --host 0.0.0.0
-      --port 5000
+      mlflow server --host 0.0.0.0 --port 5000
       --backend-store-uri sqlite:////mlflow/mlflow.db
-      --default-artifact-root /mlflow/artifacts
+      --artifacts-destination /mlflow/artifacts
+      --default-artifact-root mlflow-artifacts:/
       --serve-artifacts
     volumes:
       - mlflow_db:/mlflow
       - mlflow_artifacts:/mlflow/artifacts
-    networks:
-      - ddd_network
-    restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
       start_period: 20s
+    networks: [ddd_network]
+    restart: unless-stopped
 
-  # ── 5. Prometheus ────────────────────────────────────────────────────────────
   prometheus:
     image: prom/prometheus:v2.51.0
     container_name: ddd_prometheus
-    ports:
-      - "${PROMETHEUS_PORT:-9090}:9090"
+    ports: ["${PROMETHEUS_PORT:-9090}:9090"]
     command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.path=/prometheus"
-      - "--storage.tsdb.retention.time=15d"
-      - "--web.enable-lifecycle"
-      - "--web.enable-admin-api"
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --web.enable-lifecycle       # admin API removed (v1 enabled it)
     volumes:
       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./monitoring/prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
       - prometheus_data:/prometheus
-    networks:
-      - ddd_network
+    networks: [ddd_network]
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:9090/-/ready"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
 
-  # ── 6. Grafana ───────────────────────────────────────────────────────────────
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: ddd_alertmanager
+    ports: ["${ALERTMANAGER_PORT:-9093}:9093"]
+    command: ["--config.file=/etc/alertmanager/alertmanager.yml", "--storage.path=/alertmanager"]
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    networks: [ddd_network]
+    restart: unless-stopped
+
+  webhook:
+    build: {context: ., dockerfile: tools/webhook.Dockerfile}
+    container_name: ddd_webhook
+    environment:
+      AIRFLOW_URL: http://airflow:8080
+      AIRFLOW_USER: ${AIRFLOW_ADMIN_USER}
+      AIRFLOW_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD}
+      WEBHOOK_TOKEN: ${WEBHOOK_TOKEN}
+    volumes: [*params]
+    networks: [ddd_network]
+    restart: unless-stopped
+
   grafana:
     image: grafana/grafana:10.4.0
     container_name: ddd_grafana
-    ports:
-      - "${GRAFANA_PORT:-3001}:3000"
-    env_file:
-      - ./monitoring/grafana/grafana.env
+    ports: ["${GRAFANA_PORT:-3001}:3000"]
+    env_file: [./monitoring/grafana/grafana.env]
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
-    depends_on:
-      - prometheus
-    networks:
-      - ddd_network
+    depends_on: [prometheus]
+    networks: [ddd_network]
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:3000/api/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
 
-  # ── 7. Apache Airflow ─────────────────────────────────────────────────────────
-  # Started separately: docker-compose --profile airflow up airflow
   airflow:
-    build:
-      context: ./airflow
-      dockerfile: Dockerfile
+    build: {context: ., dockerfile: airflow/Dockerfile}
     container_name: ddd_airflow
     profiles: ["airflow"]
-    ports:
-      - "${AIRFLOW_PORT:-8080}:8080"
+    user: "${AIRFLOW_UID:-1000}:0"    # host user, so `dvc repro` can write to the mounted repo
+    ports: ["${AIRFLOW_PORT:-8080}:8080"]
     environment:
-      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
-      - AIRFLOW__CORE__LOAD_EXAMPLES=False
-      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=sqlite:////opt/airflow/airflow.db
-      - AIRFLOW__CORE__FERNET_KEY=${AIRFLOW__CORE__FERNET_KEY:-}
-      - AIRFLOW__WEBSERVER__SECRET_KEY=${AIRFLOW__CORE__FERNET_KEY:-supersecretkey}
-      - AIRFLOW__API__AUTH_BACKENDS=airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session
-      - DATA_DIR=/app/data
-      - REPORTS_DIR=/app/reports
-      - SCRIPTS_DIR=/opt/airflow/scripts
-      - MLFLOW_TRACKING_URI=http://mlflow:5000
-      - MLFLOW_LOCAL_RESOURCES_PATH=/tmp/mlflow
-      - MLFLOW_ARTIFACT_DESTINATION=/tmp/mlflow
-      - AIRFLOW__API__ACCESS_CONTROL_ALLOW_ORIGINS=*
-      - AIRFLOW__API__ACCESS_CONTROL_ALLOW_HEADERS=origin, content-type, accept, authorization
-      - AIRFLOW__API__ACCESS_CONTROL_ALLOW_METHODS=POST, GET, OPTIONS, DELETE
-      - FEATURES_CSV=/app/data/features/features.csv
+      AIRFLOW__CORE__EXECUTOR: SequentialExecutor   # demo setup; production: LocalExecutor/Celery + Postgres
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/project/airflow/dags
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: sqlite:////opt/airflow/home/airflow.db
+      AIRFLOW_HOME: /opt/airflow/home
+      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW__CORE__FERNET_KEY}
+      AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW__WEBSERVER__SECRET_KEY}
+      AIRFLOW__API__AUTH_BACKENDS: airflow.api.auth.backend.basic_auth
+      AIRFLOW_ADMIN_USER: ${AIRFLOW_ADMIN_USER}
+      AIRFLOW_ADMIN_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD}
+      DDD_REPO: /opt/project
+      DDD_PARAMS: /opt/project/params.yaml
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MODEL_SERVER_URL: http://model_server:8001
+      BACKEND_URL: http://backend:8000
+      ADMIN_TOKEN: ${ADMIN_TOKEN}
+      PYTHONPATH: /opt/project:/opt/project/airflow/dags
+      GLOG_minloglevel: "2"
     volumes:
-      - ./airflow/dags:/opt/airflow/dags
-      - ./airflow/scripts:/opt/airflow/scripts
-      - ./airflow/plugins:/opt/airflow/plugins
-      - ./airflow/airflow.db:/opt/airflow/airflow.db
-      - airflow_logs:/opt/airflow/logs
-      - ./data:/app/data
-      - ./reports:/app/reports
-      - ./models:/app/models
-      - dvc_remote:/app/dvc_remote
-      # ── NEW Phase 9 Mounts for Retraining DAG ──
-      - ./model_server:/app/model_server:ro
-      - ./params.yaml:/app/params.yaml:ro
-      - ./.dvc:/app/.dvc:ro
-      - ./dvc.yaml:/app/dvc.yaml:ro
-      - ./.git:/app/.git:ro 
-      - ./backend:/app/backend:ro
-      - ./mlflow_temp:/mlflow
+      - .:/opt/project                                   # the repo: dvc.yaml, params.yaml, data, .git
+      - ${DVC_REMOTE_DIR}:${DVC_REMOTE_DIR}              # same path as in .dvc/config
+      - airflow_home:/opt/airflow/home
+    working_dir: /opt/project
     depends_on:
-      mlflow:
-        condition: service_started
-    networks:
-      - ddd_network
+      mlflow: {condition: service_healthy}
+    networks: [ddd_network]
     restart: unless-stopped
     command: >
-      bash -c "
-        airflow db migrate &&
-        airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com || true &&
-        airflow webserver &
-        airflow scheduler
-      "
+      bash -c "airflow db migrate &&
+      (airflow users list | grep -q \"$${AIRFLOW_ADMIN_USER}\" ||
+       airflow users create --username \"$${AIRFLOW_ADMIN_USER}\" --password \"$${AIRFLOW_ADMIN_PASSWORD}\"
+         --firstname DDD --lastname Admin --role Admin --email admin@example.com) &&
+      (airflow scheduler &) && exec airflow webserver"

@@ -8,9 +8,15 @@ most recent window of a live stream. Both call `window_features`, so they cannot
 import numpy as np
 
 BASE_FEATURES = [
-    "ear_mean", "ear_min", "ear_std", "perclos",
-    "mar_mean", "mar_max",
-    "head_pitch_mean", "head_yaw_mean", "head_roll_mean",
+    "ear_mean",
+    "ear_min",
+    "ear_std",
+    "perclos",
+    "mar_mean",
+    "mar_max",
+    "head_pitch_mean",
+    "head_yaw_mean",
+    "head_roll_mean",
 ]
 BLINK_FEATURES = ["blink_rate_pm", "blink_dur_mean_s", "long_closure_rate_pm"]
 POSE_FEATURES = ["head_pitch_mean", "head_yaw_mean", "head_roll_mean"]
@@ -69,9 +75,12 @@ def window_features(t, face, ear, mar, pitch, yaw, roll, length_s: float, cfg: d
     n_long = int((ev[:, 1] >= cfg["long_closure_s"]).sum()) if len(ev) else 0
     minutes = length_s / 60.0
     return {
-        "ear_mean": float(e.mean()), "ear_min": float(e.min()), "ear_std": float(e.std()),
+        "ear_mean": float(e.mean()),
+        "ear_min": float(e.min()),
+        "ear_std": float(e.std()),
         "perclos": float((e < cfg["ear_closed"]).mean()),
-        "mar_mean": float(np.nanmean(mar[face])), "mar_max": float(np.nanmax(mar[face])),
+        "mar_mean": float(np.nanmean(mar[face])),
+        "mar_max": float(np.nanmax(mar[face])),
         "head_pitch_mean": circular_mean_deg(np.asarray(pitch, dtype=float)[face]),
         "head_yaw_mean": circular_mean_deg(np.asarray(yaw, dtype=float)[face]),
         "head_roll_mean": circular_mean_deg(np.asarray(roll, dtype=float)[face]),

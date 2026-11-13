@@ -1,43 +1,48 @@
 import { useEffect, useState } from 'react'
 import { ExternalLink, Trophy } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
-import { getMLflowRuns } from '../services/api' // <-- IMPORTING THE NEW API
+import { getMLflowRuns, getModel } from '../services/api'
 
 const MLFLOW = import.meta.env.VITE_MLFLOW_URL || 'http://127.0.0.1:5000'
-const stageColor = { Production: 'var(--green)', Staging: 'var(--amber)', Archived: 'var(--text-muted)' }
-const MODEL_COLORS = { XGBoost: 'var(--cyan)', SVM: 'var(--purple)', Unknown: 'var(--amber)' }
+const stageColor = { train_final: 'var(--green)', train_evaluate: 'var(--cyan)' }
+const MODEL_COLORS = { xgboost: 'var(--cyan)', svm: 'var(--purple)', logreg: 'var(--amber)', rule: 'var(--text-muted)' }
+const MAIN_SET = 'v2_12'
 
 export default function ModelRegistry() {
   const [runs, setRuns] = useState([])
+  const [champion, setChampion] = useState(null)
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
 
   useEffect(() => {
     getMLflowRuns().then(data => {
-      // Filter out empty/failed runs that don't have metrics yet
       const validRuns = data.filter(r => r.metrics && Object.keys(r.metrics).length > 0)
       setRuns(validRuns)
       setSelected(validRuns[0] || null)
       setLoading(false)
     })
+    getModel().then(setChampion).catch(() => setChampion(null))
   }, [])
 
-  // Find the current production model
-  const winner = runs.find(r => r.stage === 'Production') || runs[0]
-
-  // Prepare data for the Bar Chart comparing models
+  // LOSO comparison: one bar group per metric, one bar per model (main feature set + rule baseline)
+  const cmp = runs.filter(r => r.stage === 'train_evaluate' && (r.feature_set === MAIN_SET || r.model_type === 'rule'))
   const comparisonData = [
-    { metric: 'F1 Score', ...Object.fromEntries(runs.map(r => [r.model_type, r.metrics.f1_weighted || 0])) },
-    { metric: 'Accuracy', ...Object.fromEntries(runs.map(r => [r.model_type, r.metrics.accuracy || 0])) },
-    { metric: 'AUC-ROC',  ...Object.fromEntries(runs.map(r => [r.model_type, r.metrics.auc_roc || 0])) },
+    { metric: 'F1 (pooled)',            ...Object.fromEntries(cmp.map(r => [r.model_type, r.metrics.pooled_f1 || 0])) },
+    { metric: 'ROC-AUC (pooled)',       ...Object.fromEntries(cmp.map(r => [r.model_type, r.metrics.pooled_roc_auc || 0])) },
+    { metric: 'ROC-AUC / participant',  ...Object.fromEntries(cmp.map(r => [r.model_type, r.metrics.pp_mean_roc_auc || 0])) },
   ]
+  const winner = champion && {
+    model_type: champion.model_type,
+    metrics: { f1: champion.loso_metrics?.loso_pooled_f1, auc: champion.loso_metrics?.loso_pp_mean_roc_auc },
+    version: champion.model_version,
+  }
 
   return (
     <div style={{ padding: 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
           <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 22, letterSpacing: '0.05em' }}>Model Registry</h1>
-          <div className="label" style={{ marginTop: 4 }}>MLflow experiments · drowsiness_detection</div>
+          <div className="label" style={{ marginTop: 4 }}>MLflow · nested leave-one-participant-out evaluation</div>
         </div>
         <a href={MLFLOW} target="_blank" rel="noreferrer" style={{
           padding: '8px 14px', background: 'var(--bg-elevated)',
@@ -67,13 +72,13 @@ export default function ModelRegistry() {
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, color: 'var(--green)' }}>
-              Production Model — {winner.model_type}
+              Champion — {winner.model_type} (v{winner.version})
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2, fontFamily: 'var(--font-mono)' }}>
-              F1: {winner.metrics.f1_weighted?.toFixed(4)} · AUC-ROC: {winner.metrics.auc_roc?.toFixed(4)}
+              LOSO F1 (pooled): {winner.metrics.f1?.toFixed(3)} · ROC-AUC per participant: {winner.metrics.auc?.toFixed(3)}
             </div>
           </div>
-          <span className="badge badge-green">PRODUCTION</span>
+          <span className="badge badge-green">@CHAMPION</span>
         </div>
       )}
 
@@ -120,13 +125,13 @@ export default function ModelRegistry() {
                       </span>
                     )}
                   </div>
-                  {run.metrics.f1_weighted && (
+                  {(run.metrics.pooled_f1 ?? run.metrics.loso_pooled_f1) != null && (
                     <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
                       <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
-                        F1: <span style={{ color }}>{run.metrics.f1_weighted?.toFixed(3)}</span>
+                        F1: <span style={{ color }}>{(run.metrics.pooled_f1 ?? run.metrics.loso_pooled_f1)?.toFixed(3)}</span>
                       </span>
                       <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
-                        AUC: <span style={{ color }}>{run.metrics.auc_roc?.toFixed(3)}</span>
+                        AUC/pp: <span style={{ color }}>{(run.metrics.pp_mean_roc_auc ?? run.metrics.loso_pp_mean_roc_auc)?.toFixed(3)}</span>
                       </span>
                     </div>
                   )}
@@ -175,19 +180,19 @@ export default function ModelRegistry() {
           )}
 
           {/* Model comparison chart */}
-          {runs.length >= 2 && (
+          {cmp.length >= 2 && (
             <div className="card">
-              <div className="label" style={{ marginBottom: 14 }}>Model Comparison — XGBoost vs SVM</div>
+              <div className="label" style={{ marginBottom: 14 }}>Model Comparison — nested LOSO (unseen participants)</div>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={comparisonData} barGap={4}>
                   <XAxis dataKey="metric" tick={{ fill: 'var(--text-secondary)', fontSize: 11, fontFamily: 'var(--font-mono)' }} axisLine={false} tickLine={false} />
-                  <YAxis domain={[0.8, 1.0]} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <YAxis domain={[0, 1.0]} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
                   <Tooltip
                     contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 4, fontSize: 11 }}
                     formatter={(v, name) => [v?.toFixed(4), name]}
                   />
-                  {runs.map(r => (
-                    <Bar key={r.run_id} dataKey={r.model_type} fill={MODEL_COLORS[r.model_type]} radius={[3,3,0,0]} />
+                  {cmp.map(r => (
+                    <Bar key={r.run_id} dataKey={r.model_type} fill={MODEL_COLORS[r.model_type] || 'var(--amber)'} radius={[3,3,0,0]} />
                   ))}
                 </BarChart>
               </ResponsiveContainer>

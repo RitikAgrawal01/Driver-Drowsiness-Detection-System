@@ -1,72 +1,41 @@
 """
-backend/config.py
-──────────────────
-Centralised settings loaded from environment variables / .env file.
-All values have sensible defaults so the app starts without a .env file.
-Pydantic-settings validates types and ranges at startup.
+backend/config.py — INFRASTRUCTURE settings only (from environment / .env).
+
+Everything that changes behaviour (fps, window length, alarm timing, drift thresholds) comes
+from params.yaml via ddd_core.config.load_params(); the window length and decision threshold
+come from the registered model itself. One source of truth for each setting.
 """
 
 from functools import lru_cache
+
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    # ── Service identity ──────────────────────────────────────────────────────
     project_name: str = "Driver Drowsiness Detection System"
     environment: str = "development"
-    version: str = "1.0.0"
-
-    # ── Backend server ────────────────────────────────────────────────────────
-    backend_host: str = "0.0.0.0"
-    backend_port: int = 8000
+    version: str = "2.0.0"
     log_level: str = "INFO"
 
-    # ── Model server ──────────────────────────────────────────────────────────
     model_server_url: str = "http://localhost:8001"
-    model_server_timeout_sec: float = 5.0
+    mlflow_tracking_uri: str = "http://localhost:5000"
 
-    # ── MLflow ────────────────────────────────────────────────────────────────
-    mlflow_tracking_uri: str = "http://mlflow:5000"
+    # Airflow REST API (read-only use by /api/pipeline/*; credentials stay server-side)
+    airflow_url: str = "http://localhost:8080"
+    airflow_user: str = ""
+    airflow_password: str = ""
 
-    # ── Feature engineering ───────────────────────────────────────────────────
-    sliding_window_size: int = Field(default=30, ge=5, le=300)
-    ear_threshold: float = Field(default=0.25, ge=0.0, le=1.0)
-    mar_threshold: float = Field(default=0.60, ge=0.0)
-    perclos_threshold: float = Field(default=0.80, ge=0.0, le=1.0)
-    frame_rate: int = Field(default=30, ge=1, le=120)
+    # Comma-separated list of browser origins allowed to call the API (no wildcard).
+    cors_origins: str = Field(default="http://localhost:3000,http://127.0.0.1:3000")
 
-    # ── Inference / alerting ──────────────────────────────────────────────────
-    confidence_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
-    inference_latency_target_ms: float = 200.0
-    
-    # State Machine Thresholds (Tuned for ~2 FPS feature extraction)
-    to_drowsy_threshold_frames: int = Field(default=15, ge=1, description="Consecutive drowsy frames to trigger alarm")
-    to_alert_threshold_frames: int = Field(default=10, ge=1, description="Consecutive alert frames to clear alarm")
+    model_config = {"env_file": ".env", "extra": "ignore", "case_sensitive": False, "protected_namespaces": ()}
 
-    # ── Drift detection ───────────────────────────────────────────────────────
-    drift_score_threshold: float = Field(default=0.15, ge=0.0)
-    baseline_json_path: str = "data/features/baseline.json"
-    drift_window_size: int = Field(default=300, ge=50)  # frames for live dist
-
-    # ── CORS ──────────────────────────────────────────────────────────────────
-    cors_origins: list = [
-        "http://localhost:3000", 
-        "http://127.0.0.1:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:3001", 
-        "http://localhost:3002",
-        "http://127.0.0.1:3002",
-        "http://frontend:80"
-    ]
-
-    class Config:
-        env_file = ".env"
-        extra = "ignore"
-        case_sensitive = False
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip() and o.strip() != "*"]
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
-    """Cached settings singleton — call get_settings() everywhere."""
     return Settings()

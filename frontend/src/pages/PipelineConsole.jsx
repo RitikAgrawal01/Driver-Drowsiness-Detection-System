@@ -257,17 +257,15 @@ const PIPELINE_CONFIGS = {
     tabLabel: 'Retraining',
     icon: Activity,
     title: 'Retraining Pipeline',
-    subtitle: 'Airflow DAG — ddd_retrain_pipeline · MLflow · FastAPI',
+    subtitle: 'Airflow DAG — ddd_retrain_pipeline · dvc repro (LOSO + gate) · MLflow · FastAPI',
     stages: [
-      { id: 't0_check_retrain',       label: 'Check Conditions',   tool: 'Python',  color: '#06B6D4' },
-      { id: 't1_pull_data',           label: 'Pull Data',          tool: 'DVC',     color: '#A78BFA' },
-      { id: 't2_feature_engineering', label: 'Feature Eng',        tool: 'PySpark', color: '#10B981' },
-      { id: 't3_train_xgboost',       label: 'Train XGBoost',      tool: 'XGBoost', color: '#F59E0B' },
-      { id: 't4_train_svm',           label: 'Train SVM',          tool: 'sklearn', color: '#F59E0B' },
-      { id: 't5_evaluate_models',     label: 'Evaluate Models',    tool: 'Python',  color: '#06B6D4' },
-      { id: 't6_promote_if_better',   label: 'MLflow Promote',     tool: 'MLflow',  color: '#3B82F6' },
-      { id: 't7_reload_model_server', label: 'Hot Reload',         tool: 'FastAPI', color: '#10B981' },
-      { id: 't8_pipeline_report',     label: 'Pipeline Report',    tool: 'Python',  color: '#A78BFA' },
+      { id: 't0_check_trigger',        label: 'Check Trigger',      tool: 'Python',  color: '#06B6D4' },
+      { id: 't1_dvc_pull',             label: 'Pull Data',          tool: 'DVC',     color: '#A78BFA' },
+      { id: 't2_dvc_repro',            label: 'Train + LOSO + Gate', tool: 'DVC',    color: '#F59E0B' },
+      { id: 't3_dvc_push',             label: 'Push Artifacts',     tool: 'DVC',     color: '#A78BFA' },
+      { id: 't4_reload_model_server',  label: 'Hot Reload',         tool: 'FastAPI', color: '#10B981' },
+      { id: 't5_verify_serving',       label: 'Verify Serving',     tool: 'FastAPI', color: '#10B981' },
+      { id: 't6_report',               label: 'Run Report',         tool: 'Python',  color: '#A78BFA' },
     ]
   },
   ddd_data_pipeline: {
@@ -275,15 +273,13 @@ const PIPELINE_CONFIGS = {
     tabLabel: 'Data Processing',
     icon: Database,
     title: 'Data Pipeline Console',
-    subtitle: 'Airflow DAG — ddd_data_pipeline · DVC · PySpark',
+    subtitle: 'Airflow DAG — ddd_data_pipeline · dvc repro window_features',
     stages: [
       { id: 't0_validate_raw_data',   label: 'Validate Raw Data',  tool: 'Python',    color: '#06B6D4' },
-      { id: 't1_extract_frames',      label: 'Extract Frames',     tool: 'OpenCV',    color: '#06B6D4' },
-      { id: 't2_extract_landmarks',   label: 'Extract Landmarks',  tool: 'MediaPipe', color: '#06B6D4' },
-      { id: 't3_feature_engineering', label: 'Feature Engineering',tool: 'PySpark',   color: '#10B981' },
-      { id: 't4_split_data',          label: 'Split Data',         tool: 'sklearn',   color: '#10B981' },
-      { id: 't5_dvc_add_and_push',    label: 'DVC Push',           tool: 'DVC',       color: '#A78BFA' },
-      { id: 't6_pipeline_summary',    label: 'Pipeline Summary',   tool: 'Airflow',   color: '#A78BFA' },
+      { id: 't1_dvc_pull',            label: 'Pull Data',          tool: 'DVC',       color: '#A78BFA' },
+      { id: 't2_dvc_repro_features',  label: 'Landmarks → Windows', tool: 'MediaPipe', color: '#10B981' },
+      { id: 't3_dvc_push',            label: 'DVC Push',           tool: 'DVC',       color: '#A78BFA' },
+      { id: 't4_summary',             label: 'Pipeline Summary',   tool: 'Airflow',   color: '#A78BFA' },
     ]
   }
 }

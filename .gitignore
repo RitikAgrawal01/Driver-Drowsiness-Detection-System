@@ -100,3 +100,7 @@ models/*.joblib
 !reports/*.png
 
 *.whl
+# test artifacts
+.coverage
+coverage.xml
+htmlcov/
