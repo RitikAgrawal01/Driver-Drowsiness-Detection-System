@@ -13,8 +13,10 @@
       "passed": false
     },
     "beats_champion": {
-      "passed": true,
-      "note": "no registered champion yet (first model)"
+      "champion_version": 3,
+      "champion_pp_auc": 0.8112,
+      "required_gain": 0.0,
+      "passed": false
     }
   },
   "ml_gate_passed": false,
@@ -26,7 +28,7 @@
     },
     "beats_champion": {
       "passed": true,
-      "note": "no registered champion yet (first model)"
+      "note": "reproduces champion v3 exactly"
     }
   },
   "deploy": {

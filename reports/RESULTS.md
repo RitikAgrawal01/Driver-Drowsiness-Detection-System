@@ -39,17 +39,17 @@ v1 reported XGBoost F1 0.934 / ROC-AUC 0.994 (random split, 2 fps, sideways fram
 - ML candidate: **svm__v2_12** (best per-participant ROC-AUC on v2_12); baseline: rule__perclos_only.
   - beats_baseline: FAIL (candidate_pp_auc=0.7671, baseline_pp_auc=0.8112)
   - min_pooled_auc: FAIL (candidate_pooled_auc=0.6938, required=0.7)
-  - beats_champion: pass (note=no registered champion yet (first model))
+  - beats_champion: FAIL (champion_version=3, champion_pp_auc=0.8112, required_gain=0.0)
 - ML gate: **FAILED**
 - Deployment policy `deploy_baseline_if_ml_fails` (added after the first run; gate rules unchanged):
   - baseline min_pooled_auc: pass (baseline_pooled_auc=0.7586, required=0.7)
-  - baseline beats_champion: pass (note=no registered champion yet (first model))
+  - baseline beats_champion: pass (note=reproduces champion v3 exactly)
 - Deployed: **rule** — ML candidate failed; deploying the PERCLOS rule baseline (policy)
 
 ## Final model (fit on all 12 participants)
 
 - rule on perclos_only, 60 s windows, config {}, trees None, threshold 0.0191 (from grouped out-of-fold scores).
-- MLflow: `drowsiness_classifier_v2` version 3, alias `@champion`, run `951f02df72884cccad73c530a9629d0a`.
+- MLflow: `drowsiness_classifier_v2` version 4, alias `@champion`, run `8ac10dad91b4469594e448827988aafb`.
 - Expected performance on a NEW person = the nested LOSO numbers above, not a training score.
 
 ## Per participant (rule__perclos_only)

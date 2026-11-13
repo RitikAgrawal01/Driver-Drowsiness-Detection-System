@@ -1,4 +1,9 @@
 # Low-Level Design (LLD)
+
+> **Note (v2):** this is the v1 course design document, kept for reference. The v2 changes
+> (subject-wise evaluation, single source of truth, fail-safe serving, DVC-driven Airflow,
+> Alertmanager) are summarised in the [README](../README.md#project-history-v1--v2).
+
 ## Driver Drowsiness Detection System — API Endpoint Specifications
 
 **Version:** 1.0  

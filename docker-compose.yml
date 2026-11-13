@@ -18,7 +18,8 @@
 # Settings: params.yaml (mounted read-only into every service) = behaviour; .env = infrastructure.
 # ═══════════════════════════════════════════════════════════════════════════════
 
-name: ddd
+# No `name:` — the project name stays the folder name, so the existing volumes (MLflow runs and
+# registry, including the v1 history) keep being used.
 
 networks:
   ddd_network:

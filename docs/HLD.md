@@ -1,4 +1,9 @@
 # High-Level Design (HLD)
+
+> **Note (v2):** this is the v1 course design document, kept for reference. The v2 changes
+> (subject-wise evaluation, single source of truth, fail-safe serving, DVC-driven Airflow,
+> Alertmanager) are summarised in the [README](../README.md#project-history-v1--v2).
+
 ## Driver Drowsiness Detection System with End-to-End MLOps Pipeline
 
 **Version:** 1.0  
@@ -119,7 +124,7 @@ A lightweight inference-only service:
 Tracks all training experiments:
 - **Experiment tracking**: Every training run logs parameters (hyperparameters, window size, dataset hash), metrics (F1, accuracy, precision, recall, AUC-ROC, inference latency), and artifacts (model `.pkl`, confusion matrix PNG, feature importance PNG)
 - **Model Registry**: Best model promoted to `Production` stage after evaluation. Previous version moved to `Archived`
-- **Autolog + manual logging**: MLflow autolog captures XGBoost/sklearn basics; additional manual logging captures dataset DVC commit hash and Git commit SHA for full reproducibility
+- **Manual logging** (no autolog): params, metrics and artifacts are logged explicitly, plus dataset DVC commit hash and Git commit SHA for full reproducibility
 - **Backend store**: SQLite (`mlflow.db`) inside the container; artifact store on a named Docker volume
 
 ### 4.5 Apache Airflow (port 8080)
@@ -233,11 +238,11 @@ The guideline requires Dockerisation with separate containers for frontend, back
 | Lifecycle Stage | Implementation |
 |---|---|
 | Problem definition | EAR < 0.25 for > 0.8 PERCLOS over 30 frames → drowsy |
-| Data collection | UTA-RLDD dataset + custom recordings |
+| Data collection | UTA-RLDD dataset (Fold 1, 12 participants) |
 | Data validation | Schema + missing value checks as Airflow task |
 | EDA & baseline | Feature distributions computed in feature_engineering.py → baseline.json |
 | Feature engineering | PySpark sliding-window EAR, MAR, PERCLOS, head pose |
-| Model training | XGBoost + SVM with MLflow autolog + manual tracking |
+| Model training | XGBoost + SVM with manual MLflow tracking |
 | Model evaluation | F1, accuracy, AUC-ROC, inference latency; comparison in MLflow UI |
 | Model registry | MLflow registry: Staging → Production promotion |
 | Deployment | FastAPI model server loading from registry; Docker Compose |
