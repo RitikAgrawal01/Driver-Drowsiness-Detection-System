@@ -12,23 +12,29 @@ Prometheus/Grafana/Alertmanager monitoring, Docker Compose, and GitHub Actions C
 
 ## Results (v2, honest evaluation)
 
-12 participants from UTA-RLDD (Fold 1), 24 videos (alert = KSS 0, drowsy = KSS 10), 10 fps,
+24 participants from UTA-RLDD (Folds 1–2), 48 videos (alert = KSS 0, drowsy = KSS 10), 10 fps,
 evaluated with **nested leave-one-participant-out**: every number below is measured on a
-person the model never saw. Full tables: [`reports/RESULTS.md`](reports/RESULTS.md).
+person the model never saw. Fold 4 is **sealed** as a final test set; every stage refuses it.
+Full tables: [`reports/RESULTS.md`](reports/RESULTS.md).
 
 | Model (main features) | ROC-AUC per held-out person | Pooled F1 | Videos correct |
 |---|---|---|---|
-| **PERCLOS rule (baseline)** | **0.81 ± 0.20** | 0.73 | 18 / 24 |
-| SVM (RBF) | 0.77 ± 0.26 | 0.63 | 13 / 24 |
-| Logistic regression | 0.69 ± 0.27 | 0.62 | 11 / 24 |
-| XGBoost | 0.69 ± 0.25 | 0.63 | 14 / 24 |
+| **PERCLOS rule (baseline)** | **0.86 ± 0.24** | 0.74 | 35 / 48 |
+| XGBoost | 0.82 ± 0.21 | 0.71 | 33 / 48 |
+| Logistic regression | 0.74 ± 0.25 | 0.64 | 26 / 48 |
+| SVM (RBF) | 0.64 ± 0.33 | 0.67 | 29 / 48 |
 
+- **No ML model reliably beats the rule:** paired by person, XGBoost without head pose
+  (0.83 ± 0.18) is better for 8 of 24 people (Wilcoxon p = 0.12). The gate therefore deploys the
+  rule as `@champion` (policy), comparing against the champion re-scored on the same data.
 - **Leakage, measured:** with the same features and v1's settings, XGBoost scores F1 0.99 /
-  AUC 1.00 on v1's random window split but 0.57 / 0.60 on unseen people.
-- **The gate worked:** no ML model beat the one-feature PERCLOS rule, so the pre-registered gate
-  rejected them; by policy the rule is deployed as `@champion`.
-- Removing head-pose features lifts logistic regression and XGBoost from 0.69 to 0.74 (camera-setup
-  shortcut); the 10 fps blink features gave no clear gain.
+  AUC 1.00 on v1's random window split but 0.60 / 0.61 on unseen people.
+- **Head pose is a camera-setup shortcut:** several participants changed phone orientation or
+  resolution between their two videos; removing pose features helps logistic regression
+  (0.74 → 0.77) and the SVM (0.64 → 0.74).
+- **Per-driver centring** (exploratory, [`reports/EXPLORATORY_CALIBRATION.md`](reports/EXPLORATORY_CALIBRATION.md)):
+  subtracting each driver's own median does not change per-person ranking, but lifts the rule's
+  pooled specificity from 0.43 to 0.81, i.e. far fewer false alarms with one threshold.
 
 ## Architecture
 
@@ -120,7 +126,7 @@ silently. To make CI gate merges, protect `main` and mark these jobs as required
 | | v1 (course submission) | v2 |
 |---|---|---|
 | Evaluation | random window split (same people in train and test) | nested leave-one-participant-out |
-| Reported score | XGBoost F1 0.934 (optimistic) | best per-person ROC-AUC 0.81 (PERCLOS rule) |
+| Reported score | XGBoost F1 0.934 (optimistic) | best per-person ROC-AUC 0.86 (PERCLOS rule, 24 people) |
 | Frames | 2 fps, rotation ignored (10/24 videos sideways), forced 640×480 | 10 fps by timestamp, rotation applied, real size |
 | Data | `drowsy8` was a copy of `alert8` | original file restored; duplicate check in the data DAG |
 | Settings | params.yaml **and** env defaults (window 2 vs 30) | params.yaml only; CI checks dvc.lock |
@@ -133,6 +139,9 @@ reproducible at the `v1-course-submission` tag.
 
 ## Limitations
 
-- 12 participants; labels are per video (self-reported KSS), recorded at a desk, not driving.
+- 24 participants; labels are per video (self-reported KSS), recorded at a desk, not driving.
+  Detecting a 0.05 AUC difference reliably would need on the order of 100+ people.
+- Raw videos are not in the repo (UTA-RLDD licence): fetch a fold with
+  `scripts/fetch_rldd_fold.py` and symlink it to `data/raw/fold<N>`.
 - Sessions live in memory (one backend worker); scaling out needs shared session state.
 - Airflow runs the SequentialExecutor on SQLite (demo setup).
