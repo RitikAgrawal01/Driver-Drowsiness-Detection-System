@@ -1,0 +1,18 @@
+# Analysis stages (not part of the production pipeline). Run: dvc repro analysis/dvc.yaml
+stages:
+  leaky_reference:
+    wdir: ..
+    cmd: python -m analysis.leaky_reference
+    desc: 'Same features + v1 hyperparameters: random window split vs LOSO (measures the v1 leakage)'
+    deps:
+    - data/windows.parquet
+    - analysis/leaky_reference.py
+    - pipeline/evaluation.py
+    - pipeline/dataset.py
+    - ddd_core/windows.py
+    params:
+    - leaky_reference
+    - features.main_set
+    metrics:
+    - reports/leaky_vs_loso.json:
+        cache: false

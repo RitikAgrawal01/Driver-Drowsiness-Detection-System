@@ -1,0 +1,37 @@
+schema: '2.0'
+stages:
+  leaky_reference:
+    cmd: python -m analysis.leaky_reference
+    deps:
+    - path: analysis/leaky_reference.py
+      hash: md5
+      md5: 781c63566de504bb4160b01ec81a5bfc
+      size: 2969
+    - path: data/windows.parquet
+      hash: md5
+      md5: 704f23a92cb915cea345f668c0631d72
+      size: 1396742
+    - path: ddd_core/windows.py
+      hash: md5
+      md5: 204f1028659e9470bf7679653c7df26d
+      size: 3565
+    - path: pipeline/dataset.py
+      hash: md5
+      md5: 74902bb4214848cb0109d39edf5d2d3f
+      size: 1057
+    - path: pipeline/evaluation.py
+      hash: md5
+      md5: 49e26ef29c1284eef45feb4eec394fbd
+      size: 3998
+    params:
+      params.yaml:
+        features.main_set: v2_12
+        leaky_reference:
+          window_length_s: 15
+          test_size: 0.2
+          random_state: 42
+    outs:
+    - path: reports/leaky_vs_loso.json
+      hash: md5
+      md5: 8213ca2baf19f9ec0c331ce3be654e5c
+      size: 945

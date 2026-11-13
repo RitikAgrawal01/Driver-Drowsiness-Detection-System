@@ -1,0 +1,17 @@
+{
+  "model": "rule",
+  "feature_set": "perclos_only",
+  "deploy_reason": "ML candidate failed; deploying the PERCLOS rule baseline (policy)",
+  "ml_gate_passed": false,
+  "window_s": 60,
+  "config": {},
+  "n_estimators": null,
+  "threshold": 0.01913,
+  "selection_cv_auc": 0.8138,
+  "train_windows": 6481,
+  "mlflow_run_id": "951f02df72884cccad73c530a9629d0a",
+  "registered_model": "drowsiness_classifier_v2",
+  "version": 3,
+  "alias": "champion",
+  "reported_performance": "nested LOSO (reports/loso_metrics.json)"
+}

@@ -1,0 +1,47 @@
+{
+  "window_s": 15,
+  "features": "v2_12",
+  "threshold": 0.5,
+  "xgboost": {
+    "random_split": {
+      "precision": 0.9913,
+      "recall": 0.9884,
+      "f1": 0.9899,
+      "accuracy": 0.99,
+      "specificity": 0.9916,
+      "roc_auc": 0.9996,
+      "pr_auc": 0.9996
+    },
+    "loso": {
+      "precision": 0.5762,
+      "recall": 0.5682,
+      "f1": 0.5722,
+      "accuracy": 0.5814,
+      "specificity": 0.5942,
+      "roc_auc": 0.6001,
+      "pr_auc": 0.6143
+    },
+    "f1_inflation": 0.4177
+  },
+  "svm": {
+    "random_split": {
+      "precision": 0.8788,
+      "recall": 0.8699,
+      "f1": 0.8744,
+      "accuracy": 0.8768,
+      "specificity": 0.8834,
+      "roc_auc": 0.9463,
+      "pr_auc": 0.9522
+    },
+    "loso": {
+      "precision": 0.5802,
+      "recall": 0.5723,
+      "f1": 0.5762,
+      "accuracy": 0.5853,
+      "specificity": 0.5979,
+      "roc_auc": 0.577,
+      "pr_auc": 0.531
+    },
+    "f1_inflation": 0.2982
+  }
+}

@@ -93,12 +93,10 @@ models/*.pkl
 models/*.joblib
 
 # ── REPORTS ────────────────────────────────
-# Ignore the auto-generated JSON reports and images from the retraining pipeline
-reports/*.json
-reports/*.png
-reports/confusion_matrix_xgb.png
-reports/feature_importance_xgb.png
-reports/confusion_matrix_svm.png
-reports/roc_curve.png
+# Small metric/report files are DVC `cache: false` outputs: they are MEANT to be in git so a
+# commit records the numbers it produced. Large outputs (reports/samples) are DVC-cached.
+!reports/*.csv
+!reports/*.json
+!reports/*.png
 
 *.whl

@@ -1,76 +1,88 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# params.yaml — All DDD Pipeline Parameters
-# ─────────────────────────────────────────────────────────────────────────────
-# Referenced by dvc.yaml stages for reproducibility.
-# Changing any value here + running `dvc repro` re-runs only
-# the affected downstream stages automatically.
+# params.yaml — the SINGLE source of truth for every tunable setting (v2).
 #
-# Track experiment variants by changing these values and running:
-#   dvc repro
-#   dvc metrics show
-#   dvc metrics diff
+# Read by: every DVC stage (via ddd_core.config), the Airflow DAGs (they run `dvc repro`),
+# the backend and the model server (mounted read-only, DDD_PARAMS=/app/params.yaml).
+# .env holds infrastructure only (hosts, ports, passwords) — never model or feature settings.
+# CI checks that dvc.lock was produced with exactly these values (scripts/check_params_lock.py).
 # ─────────────────────────────────────────────────────────────────────────────
 
-# ── Frame Extraction ──────────────────────────────────────────────────────────
-frame_extraction:
-  fps: 2                         # frames per second to extract from video
-  output_dir: data/frames        # where extracted frames are saved
+extract:
+  target_fps: 10            # frames per second sampled from each video (by timestamp)
+  max_side: 960             # downscale so the longer side is at most this (pixels)
+  apply_rotation: true      # apply the video's rotation metadata (10 of 24 videos are rotated)
+  min_detection_confidence: 0.5
+  min_tracking_confidence: 0.5
+  workers: 4                # videos processed in parallel
 
-# ── MediaPipe FaceMesh ────────────────────────────────────────────────────────
-mediapipe:
-  min_detection_confidence: 0.5  # confidence threshold for face detection
-  min_tracking_confidence: 0.5   # confidence threshold for landmark tracking
-  refine_landmarks: true         # enable iris landmarks (468 → 478 points)
-  max_num_faces: 1               # only track the driver's face
-
-# ── Feature Engineering ───────────────────────────────────────────────────────
 features:
-  sliding_window_size: 2         # frames per window (1 second at 2fps)
-  ear_threshold: 0.25            # EAR below this → eye considered closed
-  mar_threshold: 0.60            # MAR above this → yawn detected
-  perclos_threshold: 0.80        # PERCLOS above this → strong drowsiness
+  ear_closed: 0.20          # EAR below this = eye closed (PERCLOS and blink detection)
+  long_closure_s: 0.5       # closures at least this long count as "long" (microsleep-like)
+  window_lengths_s: [15, 30, 60]   # candidate window lengths; chosen on validation, never on test
+  stride_s: 2               # step between window starts (training) / between predictions (serving)
+  min_face_ratio: 0.8       # drop windows where the face was found in < 80 % of expected frames
+  main_set: v2_12           # feature set the champion is chosen from (see ddd_core.windows)
 
-# ── Train/Test Split ──────────────────────────────────────────────────────────
-split:
-  test_size: 0.2                 # 20% held out for test
-  random_state: 42               # seed for reproducibility
+cv:
+  inner_splits: 4           # GroupKFold by participant inside each outer LOSO fold
+  n_jobs: 4
 
-# ── XGBoost Hyperparameters ───────────────────────────────────────────────────
-xgboost:
-  n_estimators: 200
-  max_depth: 6
-  learning_rate: 0.1
-  subsample: 0.8
-  colsample_bytree: 0.8
-  min_child_weight: 1
-  gamma: 0
-  reg_alpha: 0                   # L1 regularisation
-  reg_lambda: 1                  # L2 regularisation
-  eval_metric: logloss
-  early_stopping_rounds: 20      # stop if val loss doesn't improve
-  scale_pos_weight: 1            # set to n_alert/n_drowsy if class imbalanced
+models:
+  logreg:
+    C: [0.01, 0.1, 1.0, 10.0]
+  svm:
+    C: [0.1, 1.0, 10.0]
+    gamma: [0.03, 0.1, 0.3]
+  xgboost:
+    max_depth: [2, 4, 6]
+    min_child_weight: [1, 10]
+    learning_rate: 0.05
+    subsample: 0.8
+    colsample_bytree: 0.8
+    max_estimators: 2000
+    early_stopping_rounds: 50
 
-# ── SVM Hyperparameters ───────────────────────────────────────────────────────
-svm:
-  kernel: rbf                    # rbf | linear | poly
-  C: 1.0                         # regularisation parameter
-  gamma: scale                   # kernel coefficient: scale | auto | float
-  probability: true              # enable predict_proba (needed for confidence score)
-  class_weight: balanced         # handle class imbalance automatically
-  cache_size: 500                # MB of kernel cache
+# Pre-registered gate (written before any v2 result was seen). Fails closed.
+gate:
+  must_beat_baseline: rule  # champion's mean per-participant ROC-AUC must beat the PERCLOS rule
+  min_pooled_roc_auc: 0.70  # and pooled LOSO ROC-AUC must be at least this
+  min_gain_over_champion: 0.0   # and beat the current registered champion's LOSO AUC by this much
+  # Deployment policy (added after the first v2 run, gate rules above unchanged): if no ML model
+  # passes, deploy the PERCLOS rule baseline instead — provided IT meets min_pooled_roc_auc and
+  # beats the current champion. Set false to deploy nothing when ML fails.
+  deploy_baseline_if_ml_fails: true
 
-# ── Inference ─────────────────────────────────────────────────────────────────
-inference:
-  latency_target_ms: 200         # SLA: P95 inference must be below this
-  confidence_threshold: 0.7      # minimum confidence to trigger drowsy alert
+mlflow:
+  experiment: drowsiness_v2_loso
+  model_name: drowsiness_classifier_v2
+  alias: champion
 
-# ── Drift Detection ───────────────────────────────────────────────────────────
+serving:
+  target_fps: 10            # frames the backend samples per second (must equal extract.target_fps)
+  max_frame_bytes: 600000   # reject larger base64 frames
+  max_side: 960             # same downscale as training
+  alarm_on_s: 4             # drowsy predictions sustained this long -> alarm
+  alarm_off_s: 6            # alert predictions sustained this long -> clear alarm
+  no_face_warn_s: 3         # face missing this long -> "no_face" warning (never "alert")
+  min_fps: 6                # measured input fps below this -> "degraded"
+  model_timeout_s: 2.0
+
 drift:
-  score_threshold: 0.15          # KL-divergence above this → DataDriftDetected alert
-  retrain_f1_drop: 0.02          # retrain if production F1 drops by more than 2%
-  window_minutes: 5              # rolling window for live feature distribution
+  method: psi
+  bins: 10
+  psi_threshold: 0.25       # PSI > 0.25 = major shift (common rule of thumb)
+  min_windows: 60           # don't score drift on fewer windows than this
+  buffer_windows: 600       # rolling buffer of de-duplicated live windows (all sessions)
 
-# ── Retraining ────────────────────────────────────────────────────────────────
+slo:                        # service-level objectives -> monitoring/prometheus/alert_rules.yml (generated)
+  p95_latency_s: 0.2        # frame -> prediction, end to end
+  max_error_ratio: 0.05     # failed model calls / model calls
+  drift_for: 10m            # drift must persist this long before it pages / triggers retraining
+
 retrain:
-  promote_f1_gain: 0.02          # auto-promote new model if F1 improves by > 2%
-  error_rate_threshold: 0.05     # alert if error rate exceeds 5%
+  cooldown_hours: 6         # webhook ignores repeat drift triggers within this window
+
+leaky_reference:            # analysis/dvc.yaml: random split vs LOSO with v1 settings
+  window_length_s: 15
+  test_size: 0.2
+  random_state: 42

@@ -1,0 +1,39 @@
+{
+  "ml_candidate": "svm__v2_12",
+  "baseline_run": "rule__perclos_only",
+  "ml_checks": {
+    "beats_baseline": {
+      "candidate_pp_auc": 0.7671,
+      "baseline_pp_auc": 0.8112,
+      "passed": false
+    },
+    "min_pooled_auc": {
+      "candidate_pooled_auc": 0.6938,
+      "required": 0.7,
+      "passed": false
+    },
+    "beats_champion": {
+      "passed": true,
+      "note": "no registered champion yet (first model)"
+    }
+  },
+  "ml_gate_passed": false,
+  "baseline_checks": {
+    "min_pooled_auc": {
+      "baseline_pooled_auc": 0.7586,
+      "required": 0.7,
+      "passed": true
+    },
+    "beats_champion": {
+      "passed": true,
+      "note": "no registered champion yet (first model)"
+    }
+  },
+  "deploy": {
+    "model": "rule",
+    "feature_set": "perclos_only",
+    "run_key": "rule__perclos_only",
+    "reason": "ML candidate failed; deploying the PERCLOS rule baseline (policy)"
+  },
+  "passed": true
+}

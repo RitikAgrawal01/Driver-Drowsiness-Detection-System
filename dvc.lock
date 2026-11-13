@@ -1,202 +1,323 @@
 schema: '2.0'
 stages:
-  extract_frames:
-    cmd: python airflow/scripts/extract_frames.py --fps 2
+  extract_landmarks:
+    cmd: python -m pipeline.extract_landmarks
     deps:
-    - path: airflow/scripts/extract_frames.py
+    - path: data/raw
       hash: md5
-      md5: b0f5bac5bfd777c4b766aa4560d93aee
-      size: 8622
-    - path: data/raw/
-      hash: md5
-      md5: da2eca8ed6d82cfc72e9793079c00b73.dir
-      size: 15585002944
+      md5: 52885129719a5e9bfe66bafb44ba8816.dir
+      size: 16181178706
       nfiles: 24
+    - path: ddd_core/geometry.py
+      hash: md5
+      md5: 3b8a6d11feb32adc011b2224faab9de9
+      size: 3198
+    - path: pipeline/dataset.py
+      hash: md5
+      md5: 74902bb4214848cb0109d39edf5d2d3f
+      size: 1057
+    - path: pipeline/extract_landmarks.py
+      hash: md5
+      md5: cf5414c3f2d32808e522fea6e436fef7
+      size: 6124
     params:
       params.yaml:
-        frame_extraction.fps: 2
-        frame_extraction.output_dir: data/frames
+        extract:
+          target_fps: 10
+          max_side: 960
+          apply_rotation: true
+          min_detection_confidence: 0.5
+          min_tracking_confidence: 0.5
+          workers: 4
     outs:
-    - path: data/frames/
+    - path: data/landmarks_10fps
       hash: md5
-      md5: c0d8913ad177c9d1fe80b68bdb75d90b.dir
-      size: 5514516050
-      nfiles: 28842
+      md5: 23fdf4fb4b3d5f3141d184c79e4f80f1.dir
+      size: 120484778
+      nfiles: 24
     - path: reports/extraction_summary.json
       hash: md5
-      md5: c21a866d38639b539e0b75157a560d43
-      size: 5200
-  extract_landmarks:
-    cmd: python airflow/scripts/extract_landmarks.py
+      md5: 0e565c4e8fc0c09a162ce03bfc29509b
+      size: 8239
+    - path: reports/samples
+      hash: md5
+      md5: 783d3aff3a640f829cbb597e6e5ad616.dir
+      size: 957105
+      nfiles: 24
+  frame_features:
+    cmd: python -m pipeline.frame_features
     deps:
-    - path: airflow/scripts/extract_landmarks.py
+    - path: data/landmarks_10fps
       hash: md5
-      md5: 9d8b638efb5df455a6c5affee853611e
-      size: 10127
-    - path: data/frames/
+      md5: 23fdf4fb4b3d5f3141d184c79e4f80f1.dir
+      size: 120484778
+      nfiles: 24
+    - path: ddd_core/geometry.py
       hash: md5
-      md5: c0d8913ad177c9d1fe80b68bdb75d90b.dir
-      size: 5514516050
-      nfiles: 28842
+      md5: 3b8a6d11feb32adc011b2224faab9de9
+      size: 3198
+    - path: pipeline/frame_features.py
+      hash: md5
+      md5: d9ab10b578e18eba285e1aa3d7c61ac0
+      size: 1354
+    outs:
+    - path: data/frame_features.parquet
+      hash: md5
+      md5: 579f58bb3f06445397295a34e196dd61
+      size: 7866010
+  window_features:
+    cmd: python -m pipeline.window_features
+    deps:
+    - path: data/frame_features.parquet
+      hash: md5
+      md5: 579f58bb3f06445397295a34e196dd61
+      size: 7866010
+    - path: ddd_core/windows.py
+      hash: md5
+      md5: 204f1028659e9470bf7679653c7df26d
+      size: 3565
+    - path: pipeline/window_features.py
+      hash: md5
+      md5: 1256efd32eabcde6a09b8ecd7b744b04
+      size: 2359
     params:
       params.yaml:
-        mediapipe.min_detection_confidence: 0.5
-        mediapipe.min_tracking_confidence: 0.5
+        extract.target_fps: 10
+        features:
+          ear_closed: 0.2
+          long_closure_s: 0.5
+          window_lengths_s:
+          - 15
+          - 30
+          - 60
+          stride_s: 2
+          min_face_ratio: 0.8
+          main_set: v2_12
     outs:
-    - path: data/landmarks/landmarks.csv
+    - path: data/windows.parquet
       hash: md5
-      md5: 737341634ce430f35c166aaff8ed76d2
-      size: 776211816
-    - path: reports/landmark_summary.json
+      md5: 704f23a92cb915cea345f668c0631d72
+      size: 1396742
+    - path: reports/window_summary.json
       hash: md5
-      md5: df8371f203400d291045118d294743c5
-      size: 408
-  feature_engineering:
-    cmd: python airflow/scripts/feature_engineering.py --window-size 2
+      md5: 17fad5a26933c5aa02e29a06cfa36a0c
+      size: 2545
+  train_evaluate:
+    cmd: python -m pipeline.train_evaluate
     deps:
-    - path: airflow/scripts/feature_engineering.py
+    - path: data/windows.parquet
       hash: md5
-      md5: 40087a3537c0f2ba54d1a85689b0660a
-      size: 19336
-    - path: data/landmarks/landmarks.csv
+      md5: 704f23a92cb915cea345f668c0631d72
+      size: 1396742
+    - path: ddd_core/windows.py
       hash: md5
-      md5: 737341634ce430f35c166aaff8ed76d2
-      size: 776211816
+      md5: 204f1028659e9470bf7679653c7df26d
+      size: 3565
+    - path: pipeline/evaluation.py
+      hash: md5
+      md5: 49e26ef29c1284eef45feb4eec394fbd
+      size: 3998
+    - path: pipeline/models.py
+      hash: md5
+      md5: caed33da01dfc7d183ade1863c48e763
+      size: 4578
+    - path: pipeline/train_evaluate.py
+      hash: md5
+      md5: e9de441f90489077898dccc48c6bc80d
+      size: 5271
     params:
       params.yaml:
-        features.ear_threshold: 0.25
-        features.mar_threshold: 0.6
-        features.sliding_window_size: 2
+        cv:
+          inner_splits: 4
+          n_jobs: 4
+        mlflow.experiment: drowsiness_v2_loso
+        models:
+          logreg:
+            C:
+            - 0.01
+            - 0.1
+            - 1.0
+            - 10.0
+          svm:
+            C:
+            - 0.1
+            - 1.0
+            - 10.0
+            gamma:
+            - 0.03
+            - 0.1
+            - 0.3
+          xgboost:
+            max_depth:
+            - 2
+            - 4
+            - 6
+            min_child_weight:
+            - 1
+            - 10
+            learning_rate: 0.05
+            subsample: 0.8
+            colsample_bytree: 0.8
+            max_estimators: 2000
+            early_stopping_rounds: 50
     outs:
-    - path: data/features/baseline.json
+    - path: data/loso_predictions.parquet
       hash: md5
-      md5: 72f8ed016e7233d4463c1beaa10679a8
-      size: 9759
-    - path: data/features/features.csv
+      md5: 373e0ed416e0035c36d3872ab1817f39
+      size: 478346
+    - path: reports/loso_choices.json
       hash: md5
-      md5: 8aa60abdde17582bd8f5eeeacc497600
-      size: 4264014
-    - path: reports/feature_engineering_summary.json
+      md5: f4fa581d7aa727e3f2adef71e58f1f71
+      size: 31606
+    - path: reports/loso_metrics.json
       hash: md5
-      md5: 57fa15bb4b7930d8a03712c7a1cd17c3
-      size: 378
-  split_data:
-    cmd: python airflow/scripts/split_data.py
+      md5: f09ec35e8ce1e972f975a2f7e843afb9
+      size: 7941
+    - path: reports/loso_per_participant.csv
+      hash: md5
+      md5: 1fdfdb19845f055598c77c2dd2c2790d
+      size: 8763
+  gate:
+    cmd: python -m pipeline.gate
     deps:
-    - path: airflow/scripts/split_data.py
+    - path: pipeline/gate.py
       hash: md5
-      md5: e8345bfd8f88e0ab21919bec118d404d
-      size: 3585
-    - path: data/features/features.csv
+      md5: d457a78c9341d6d3d2c60e087f93d525
+      size: 5289
+    - path: reports/loso_metrics.json
       hash: md5
-      md5: 8aa60abdde17582bd8f5eeeacc497600
-      size: 4264014
+      md5: f09ec35e8ce1e972f975a2f7e843afb9
+      size: 7941
     params:
       params.yaml:
-        split.random_state: 42
-        split.test_size: 0.2
+        features.main_set: v2_12
+        gate:
+          must_beat_baseline: rule
+          min_pooled_roc_auc: 0.7
+          min_gain_over_champion: 0.0
+          deploy_baseline_if_ml_fails: true
+        mlflow:
+          experiment: drowsiness_v2_loso
+          model_name: drowsiness_classifier_v2
+          alias: champion
     outs:
-    - path: data/processed/test.csv
+    - path: reports/gate.json
       hash: md5
-      md5: bee4d7f81b34e637f7ffcceffa914335
-      size: 823398
-    - path: data/processed/train.csv
-      hash: md5
-      md5: cf54457b4349a769e75aba89b4875541
-      size: 3288122
-    - path: reports/split_summary.json
-      hash: md5
-      md5: cd72303634d931818c141f5c234bde2c
-      size: 237
-  train_xgboost:
-    cmd: python model_server/train_xgboost.py
+      md5: ee74597769a82f8705f7143b1657b6a5
+      size: 927
+  train_final:
+    cmd: python -m pipeline.train_final
     deps:
-    - path: data/processed/train.csv
+    - path: data/windows.parquet
       hash: md5
-      md5: 8926cd90fbaaacf7922cc8d86fe5197d
-      size: 2457023
-    - path: model_server/train_xgboost.py
+      md5: 704f23a92cb915cea345f668c0631d72
+      size: 1396742
+    - path: pipeline/models.py
       hash: md5
-      md5: 5a483a23ce6d8908732b08cfb9306d42
-      size: 17802
+      md5: caed33da01dfc7d183ade1863c48e763
+      size: 4578
+    - path: pipeline/pyfunc_model.py
+      hash: md5
+      md5: a1975be86b49cea17a5c95669639ab9a
+      size: 1190
+    - path: pipeline/train_final.py
+      hash: md5
+      md5: 4904c5358c7be8331922d251d8990d43
+      size: 5788
+    - path: reports/gate.json
+      hash: md5
+      md5: ee74597769a82f8705f7143b1657b6a5
+      size: 927
     params:
       params.yaml:
-        xgboost.colsample_bytree: 0.8
-        xgboost.learning_rate: 0.1
-        xgboost.max_depth: 6
-        xgboost.n_estimators: 200
-        xgboost.subsample: 0.8
+        cv:
+          inner_splits: 4
+          n_jobs: 4
+        drift.bins: 10
+        features.main_set: v2_12
+        mlflow:
+          experiment: drowsiness_v2_loso
+          model_name: drowsiness_classifier_v2
+          alias: champion
+        models:
+          logreg:
+            C:
+            - 0.01
+            - 0.1
+            - 1.0
+            - 10.0
+          svm:
+            C:
+            - 0.1
+            - 1.0
+            - 10.0
+            gamma:
+            - 0.03
+            - 0.1
+            - 0.3
+          xgboost:
+            max_depth:
+            - 2
+            - 4
+            - 6
+            min_child_weight:
+            - 1
+            - 10
+            learning_rate: 0.05
+            subsample: 0.8
+            colsample_bytree: 0.8
+            max_estimators: 2000
+            early_stopping_rounds: 50
     outs:
-    - path: models/xgboost_model.pkl
+    - path: data/drift_baseline.json
       hash: md5
-      md5: 5ca4a64a92d7695cd5f33a1c70b17f30
-      size: 733780
-    - path: reports/confusion_matrix_xgb.png
+      md5: 392ed6b1f7b61c2f26bb4ddf20432a8a
+      size: 6300
+    - path: reports/final_model.json
       hash: md5
-      md5: c8a1e29940c6bac88482aa98f86f7ee3
-      size: 38086
-    - path: reports/feature_importance_xgb.png
-      hash: md5
-      md5: 6a5d6541d9cd73f807060f9f98566749
-      size: 54745
-    - path: reports/xgboost_metrics.json
-      hash: md5
-      md5: 5c5fc575ae6c8d0a7312fce14283e93d
-      size: 435
-  train_svm:
-    cmd: python model_server/train_svm.py
+      md5: e0ab19eb2b9194cbc62608328a9fa602
+      size: 519
+  report:
+    cmd: python -m pipeline.report
     deps:
-    - path: data/processed/train.csv
+    - path: pipeline/report.py
       hash: md5
-      md5: 8926cd90fbaaacf7922cc8d86fe5197d
-      size: 2457023
-    - path: model_server/train_svm.py
+      md5: 98be4fb167fb94ff3f7d9e6db2f4195f
+      size: 6767
+    - path: reports/extraction_summary.json
       hash: md5
-      md5: 2184457ffbc44faaf127a651079363ae
-      size: 13143
-    params:
-      params.yaml:
-        svm.C: 1.0
-        svm.gamma: scale
-        svm.kernel: rbf
+      md5: 0e565c4e8fc0c09a162ce03bfc29509b
+      size: 8239
+    - path: reports/final_model.json
+      hash: md5
+      md5: e0ab19eb2b9194cbc62608328a9fa602
+      size: 519
+    - path: reports/gate.json
+      hash: md5
+      md5: ee74597769a82f8705f7143b1657b6a5
+      size: 927
+    - path: reports/leaky_vs_loso.json
+      hash: md5
+      md5: 8213ca2baf19f9ec0c331ce3be654e5c
+      size: 945
+    - path: reports/loso_metrics.json
+      hash: md5
+      md5: f09ec35e8ce1e972f975a2f7e843afb9
+      size: 7941
+    - path: reports/loso_per_participant.csv
+      hash: md5
+      md5: 1fdfdb19845f055598c77c2dd2c2790d
+      size: 8763
+    - path: reports/window_summary.json
+      hash: md5
+      md5: 17fad5a26933c5aa02e29a06cfa36a0c
+      size: 2545
     outs:
-    - path: models/svm_model.pkl
+    - path: reports/RESULTS.md
       hash: md5
-      md5: 95eae528331609ed86553ec44e8056d8
-      size: 955081
-    - path: reports/confusion_matrix_svm.png
+      md5: fc3372cee28fd5257150b4c337b07e3a
+      size: 4913
+    - path: reports/per_participant_auc.png
       hash: md5
-      md5: aa3fd32d09caa6940d94d424d672b9f4
-      size: 40166
-    - path: reports/svm_metrics.json
-      hash: md5
-      md5: 6287d44d5fd18475e90f2cfe5a6bea77
-      size: 431
-  evaluate:
-    cmd: python model_server/evaluate.py
-    deps:
-    - path: data/processed/test.csv
-      hash: md5
-      md5: da2fff2261c3835998ddee9330ba0539
-      size: 613397
-    - path: model_server/evaluate.py
-      hash: md5
-      md5: bdff0821dacff2c53a04bb5434ec9cf7
-      size: 15887
-    - path: models/svm_model.pkl
-      hash: md5
-      md5: 95eae528331609ed86553ec44e8056d8
-      size: 955081
-    - path: models/xgboost_model.pkl
-      hash: md5
-      md5: 5ca4a64a92d7695cd5f33a1c70b17f30
-      size: 733780
-    outs:
-    - path: reports/evaluation_report.json
-      hash: md5
-      md5: 2195743fd35f12d41318d51ec1c18808
-      size: 1813
-    - path: reports/roc_curve.png
-      hash: md5
-      md5: 94787233ab7c77745713786a7c97eb78
-      size: 79395
+      md5: b0ba8631ef6bd83055b61dd589181c0f
+      size: 43775

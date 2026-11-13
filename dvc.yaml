@@ -1,157 +1,130 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# dvc.yaml — DDD Data & Model Pipeline
-# ─────────────────────────────────────────────────────────────────────────────
-# Run the full pipeline:   dvc repro
-# Visualise the DAG:       dvc dag
-# Check what changed:      dvc status
-# Push artifacts:          dvc push
-# Pull artifacts:          dvc pull
+# dvc.yaml — the 7-stage training pipeline (v2). All settings come from params.yaml.
 #
-# Every stage specifies:
-#   cmd   — shell command to execute
-#   deps  — inputs (code + data); change triggers re-run
-#   params — params.yaml keys that affect this stage
-#   outs  — outputs tracked by DVC (cached, not stored in Git)
-#   metrics — JSON metrics tracked by DVC (stored in Git, small)
-#   plots — plot files (confusion matrices, etc.)
+#   dvc repro            # run what is stale (Airflow's DAGs call exactly this)
+#   dvc dag              # show the graph
+#   dvc status           # what changed
+#
+# Run with the project venv and MLflow reachable, e.g.:  bash scripts/run_pipeline.sh
+# Analysis (random split vs LOSO): analysis/dvc.yaml
 # ─────────────────────────────────────────────────────────────────────────────
-
 stages:
 
-  # ── Stage 1: Extract frames from raw videos ──────────────────────────────
-  extract_frames:
-    cmd: python airflow/scripts/extract_frames.py --fps ${frame_extraction.fps}
-    desc: 'OpenCV: extract JPEG frames from raw .avi/.mp4 videos at TARGET_FPS'
+  extract_landmarks:
+    cmd: python -m pipeline.extract_landmarks
+    desc: 'Video -> 10 fps landmarks (rotation applied, real image size, MediaPipe video mode)'
     deps:
-    - airflow/scripts/extract_frames.py
-    - data/raw/
+    - data/raw
+    - pipeline/extract_landmarks.py
+    - pipeline/dataset.py
+    - ddd_core/geometry.py
     params:
-    - params.yaml:
-      - frame_extraction.fps
-      - frame_extraction.output_dir
+    - extract
     outs:
-    - data/frames/:
-        cache: true
-        persist: false
+    - data/landmarks_10fps
+    - reports/samples
     metrics:
     - reports/extraction_summary.json:
         cache: false
 
-  # ── Stage 2: MediaPipe landmark extraction ───────────────────────────────
-  extract_landmarks:
-    cmd: python airflow/scripts/extract_landmarks.py
-    desc: 'MediaPipe FaceMesh: extract 468 3D facial landmarks per frame'
+  frame_features:
+    cmd: python -m pipeline.frame_features
+    desc: 'Per-frame EAR, inner-lip MAR, head pose (same function the backend uses)'
     deps:
-    - airflow/scripts/extract_landmarks.py
-    - data/frames/
-    params:
-    - params.yaml:
-      - mediapipe.min_detection_confidence
-      - mediapipe.min_tracking_confidence
+    - data/landmarks_10fps
+    - pipeline/frame_features.py
+    - ddd_core/geometry.py
     outs:
-    - data/landmarks/landmarks.csv:
-        cache: true
+    - data/frame_features.parquet
+
+  window_features:
+    cmd: python -m pipeline.window_features
+    desc: 'Time-based windows (15/30/60 s, 2 s stride) -> 9 fixed + 3 blink features'
+    deps:
+    - data/frame_features.parquet
+    - pipeline/window_features.py
+    - ddd_core/windows.py
+    params:
+    - features
+    - extract.target_fps
+    outs:
+    - data/windows.parquet
     metrics:
-    - reports/landmark_summary.json:
+    - reports/window_summary.json:
         cache: false
 
-  # ── Stage 3: PySpark feature engineering ─────────────────────────────────
-  feature_engineering:
-    cmd: python airflow/scripts/feature_engineering.py --window-size ${features.sliding_window_size}
-    desc: 'PySpark sliding-window: EAR, PERCLOS, MAR, head pose aggregation'
+  train_evaluate:
+    cmd: python -m pipeline.train_evaluate
+    desc: 'Nested leave-one-participant-out: PERCLOS rule, logreg, SVM, XGBoost x 3 feature sets'
     deps:
-    - airflow/scripts/feature_engineering.py
-    - data/landmarks/landmarks.csv
+    - data/windows.parquet
+    - pipeline/train_evaluate.py
+    - pipeline/models.py
+    - pipeline/evaluation.py
+    - ddd_core/windows.py
     params:
-    - params.yaml:
-      - features.sliding_window_size
-      - features.ear_threshold
-      - features.mar_threshold
+    - cv
+    - models
+    - mlflow.experiment
     outs:
-    - data/features/features.csv:
-        cache: true
-    - data/features/baseline.json:
-        cache: true
+    - data/loso_predictions.parquet
+    - reports/loso_choices.json:
+        cache: false
+    - reports/loso_per_participant.csv:
+        cache: false
     metrics:
-    - reports/feature_engineering_summary.json:
+    - reports/loso_metrics.json:
         cache: false
 
-  # ── Stage 4: Train/test split ────────────────────────────────────────────
-  split_data:
-    cmd: python airflow/scripts/split_data.py
-    desc: Stratified 80/20 train/test split on label column
+  gate:
+    cmd: python -m pipeline.gate
+    desc: 'Pre-registered gate; exit 1 (pipeline stops, nothing promoted) if it fails; fails closed'
     deps:
-    - airflow/scripts/split_data.py
-    - data/features/features.csv
+    - reports/loso_metrics.json
+    - pipeline/gate.py
     params:
-    - params.yaml:
-      - split.test_size
-      - split.random_state
+    - gate
+    - features.main_set
+    - mlflow
     outs:
-    - data/processed/train.csv:
-        cache: true
-    - data/processed/test.csv:
-        cache: true
-    metrics:
-    - reports/split_summary.json:
+    - reports/gate.json:
         cache: false
 
-# ── Stage 5: Train XGBoost model ─────────────────────────────────────────
-  train_xgboost:
-    cmd: python model_server/train_xgboost.py
-    desc: Train XGBoost classifier with MLflow experiment tracking
+  train_final:
+    cmd: python -m pipeline.train_final
+    desc: 'Fit the gated model on all 12 participants; register it in MLflow with alias @champion'
     deps:
-    - model_server/train_xgboost.py
-    - data/processed/train.csv
+    - reports/gate.json
+    - data/windows.parquet
+    - pipeline/train_final.py
+    - pipeline/models.py
+    - pipeline/pyfunc_model.py
     params:
-    - params.yaml:
-      - xgboost.n_estimators
-      - xgboost.max_depth
-      - xgboost.learning_rate
-      - xgboost.subsample
-      - xgboost.colsample_bytree
+    - models
+    - cv
+    - mlflow
+    - drift.bins
+    - features.main_set
     outs:
-    - models/xgboost_model.pkl:
-        cache: true
-    - reports/confusion_matrix_xgb.png:  # MOVED HERE
-        cache: true
-    - reports/feature_importance_xgb.png: # MOVED HERE
-        cache: true
-    metrics:
-    - reports/xgboost_metrics.json:
+    - data/drift_baseline.json
+    - reports/final_model.json:
         cache: false
 
-  # ── Stage 6: Train SVM model ─────────────────────────────────────────────
-  train_svm:
-    cmd: python model_server/train_svm.py
-    desc: Train SVM classifier (RBF kernel) with MLflow experiment tracking
+  report:
+    cmd: python -m pipeline.report
+    desc: 'Write reports/RESULTS.md and the per-participant chart'
     deps:
-    - model_server/train_svm.py
-    - data/processed/train.csv
-    params:
-    - params.yaml:
-      - svm.kernel
-      - svm.C
-      - svm.gamma
+    - reports/extraction_summary.json
+    - reports/window_summary.json
+    - reports/loso_metrics.json
+    - reports/loso_per_participant.csv
+    - reports/leaky_vs_loso.json
+    - reports/gate.json
+    - reports/final_model.json
+    - pipeline/report.py
     outs:
-    - models/svm_model.pkl:
-        cache: true
-    - reports/confusion_matrix_svm.png: # MOVED HERE
-        cache: true
-    metrics:
-    - reports/svm_metrics.json:
+    - reports/RESULTS.md:
         cache: false
-
-  # ── Stage 7: Evaluate and compare models ─────────────────────────────────
-  evaluate:
-    cmd: python model_server/evaluate.py
-    deps:
-      - data/processed/test.csv
-      - models/xgboost_model.pkl
-      - models/svm_model.pkl
-      - model_server/evaluate.py
-    outs:
-      - reports/evaluation_report.json:
-          cache: false
-      - reports/roc_curve.png:
-          cache: true
+    plots:
+    - reports/per_participant_auc.png:
+        cache: false

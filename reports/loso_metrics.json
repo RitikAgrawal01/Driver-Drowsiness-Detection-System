@@ -1,0 +1,365 @@
+{
+  "rule__perclos_only": {
+    "pooled": {
+      "precision": 0.6027,
+      "recall": 0.9081,
+      "f1": 0.7245,
+      "accuracy": 0.6602,
+      "specificity": 0.4201,
+      "roc_auc": 0.7586,
+      "pr_auc": 0.7837
+    },
+    "per_participant_mean": {
+      "precision": 0.6372,
+      "recall": 0.9094,
+      "f1": 0.7321,
+      "accuracy": 0.6567,
+      "roc_auc": 0.8112,
+      "pr_auc": 0.8157
+    },
+    "per_participant_std": {
+      "precision": 0.1543,
+      "recall": 0.1017,
+      "f1": 0.099,
+      "accuracy": 0.1569,
+      "roc_auc": 0.198,
+      "pr_auc": 0.2056
+    },
+    "worst_participant_recall": 0.6982,
+    "video_level_correct": "18/24",
+    "video_level_accuracy": 0.75,
+    "n_windows": 6481,
+    "chosen_window_s": {
+      "60": 12
+    }
+  },
+  "logreg__v1_9_fixed": {
+    "pooled": {
+      "precision": 0.49,
+      "recall": 0.8071,
+      "f1": 0.6098,
+      "accuracy": 0.4917,
+      "specificity": 0.1862,
+      "roc_auc": 0.6797,
+      "pr_auc": 0.7296
+    },
+    "per_participant_mean": {
+      "precision": 0.5373,
+      "recall": 0.8171,
+      "f1": 0.5838,
+      "accuracy": 0.4907,
+      "roc_auc": 0.7191,
+      "pr_auc": 0.7503
+    },
+    "per_participant_std": {
+      "precision": 0.1702,
+      "recall": 0.2856,
+      "f1": 0.1621,
+      "accuracy": 0.1127,
+      "roc_auc": 0.2565,
+      "pr_auc": 0.2195
+    },
+    "worst_participant_recall": 0.0772,
+    "video_level_correct": "12/24",
+    "video_level_accuracy": 0.5,
+    "n_windows": 6481,
+    "chosen_window_s": {
+      "60": 12
+    }
+  },
+  "logreg__v2_12": {
+    "pooled": {
+      "precision": 0.4694,
+      "recall": 0.91,
+      "f1": 0.6193,
+      "accuracy": 0.4495,
+      "specificity": 0.0033,
+      "roc_auc": 0.6321,
+      "pr_auc": 0.6877
+    },
+    "per_participant_mean": {
+      "precision": 0.4623,
+      "recall": 0.9126,
+      "f1": 0.6117,
+      "accuracy": 0.4488,
+      "roc_auc": 0.6902,
+      "pr_auc": 0.7305
+    },
+    "per_participant_std": {
+      "precision": 0.0712,
+      "recall": 0.191,
+      "f1": 0.1051,
+      "accuracy": 0.0976,
+      "roc_auc": 0.2733,
+      "pr_auc": 0.2201
+    },
+    "worst_participant_recall": 0.3889,
+    "video_level_correct": "11/24",
+    "video_level_accuracy": 0.4583,
+    "n_windows": 6481,
+    "chosen_window_s": {
+      "60": 12
+    }
+  },
+  "logreg__v2_12_no_pose": {
+    "pooled": {
+      "precision": 0.5383,
+      "recall": 0.7981,
+      "f1": 0.6429,
+      "accuracy": 0.5638,
+      "specificity": 0.3369,
+      "roc_auc": 0.6805,
+      "pr_auc": 0.7348
+    },
+    "per_participant_mean": {
+      "precision": 0.6004,
+      "recall": 0.8081,
+      "f1": 0.6466,
+      "accuracy": 0.5611,
+      "roc_auc": 0.7439,
+      "pr_auc": 0.7667
+    },
+    "per_participant_std": {
+      "precision": 0.2057,
+      "recall": 0.2045,
+      "f1": 0.1016,
+      "accuracy": 0.1526,
+      "roc_auc": 0.2372,
+      "pr_auc": 0.2215
+    },
+    "worst_participant_recall": 0.5018,
+    "video_level_correct": "16/24",
+    "video_level_accuracy": 0.6667,
+    "n_windows": 6481,
+    "chosen_window_s": {
+      "60": 12
+    }
+  },
+  "svm__v1_9_fixed": {
+    "pooled": {
+      "precision": 0.5051,
+      "recall": 0.8495,
+      "f1": 0.6335,
+      "accuracy": 0.5164,
+      "specificity": 0.1938,
+      "roc_auc": 0.7293,
+      "pr_auc": 0.7699
+    },
+    "per_participant_mean": {
+      "precision": 0.5144,
+      "recall": 0.853,
+      "f1": 0.6181,
+      "accuracy": 0.5193,
+      "roc_auc": 0.7765,
+      "pr_auc": 0.8179
+    },
+    "per_participant_std": {
+      "precision": 0.1265,
+      "recall": 0.27,
+      "f1": 0.1431,
+      "accuracy": 0.1168,
+      "roc_auc": 0.2382,
+      "pr_auc": 0.1804
+    },
+    "worst_participant_recall": 0.1835,
+    "video_level_correct": "12/24",
+    "video_level_accuracy": 0.5,
+    "n_windows": 6481,
+    "chosen_window_s": {
+      "60": 12
+    }
+  },
+  "svm__v2_12": {
+    "pooled": {
+      "precision": 0.4915,
+      "recall": 0.8674,
+      "f1": 0.6275,
+      "accuracy": 0.4932,
+      "specificity": 0.1306,
+      "roc_auc": 0.6938,
+      "pr_auc": 0.7383
+    },
+    "per_participant_mean": {
+      "precision": 0.5125,
+      "recall": 0.869,
+      "f1": 0.6181,
+      "accuracy": 0.4968,
+      "roc_auc": 0.7671,
+      "pr_auc": 0.8099
+    },
+    "per_participant_std": {
+      "precision": 0.0897,
+      "recall": 0.2244,
+      "f1": 0.0995,
+      "accuracy": 0.102,
+      "roc_auc": 0.2622,
+      "pr_auc": 0.1869
+    },
+    "worst_participant_recall": 0.2561,
+    "video_level_correct": "13/24",
+    "video_level_accuracy": 0.5417,
+    "n_windows": 6511,
+    "chosen_window_s": {
+      "60": 11,
+      "30": 1
+    }
+  },
+  "svm__v2_12_no_pose": {
+    "pooled": {
+      "precision": 0.5816,
+      "recall": 0.8648,
+      "f1": 0.6955,
+      "accuracy": 0.6274,
+      "specificity": 0.3973,
+      "roc_auc": 0.6835,
+      "pr_auc": 0.7092
+    },
+    "per_participant_mean": {
+      "precision": 0.6165,
+      "recall": 0.8644,
+      "f1": 0.7002,
+      "accuracy": 0.6261,
+      "roc_auc": 0.7568,
+      "pr_auc": 0.7775
+    },
+    "per_participant_std": {
+      "precision": 0.1863,
+      "recall": 0.1689,
+      "f1": 0.1316,
+      "accuracy": 0.1699,
+      "roc_auc": 0.2127,
+      "pr_auc": 0.2006
+    },
+    "worst_participant_recall": 0.4818,
+    "video_level_correct": "15/24",
+    "video_level_accuracy": 0.625,
+    "n_windows": 6481,
+    "chosen_window_s": {
+      "60": 12
+    }
+  },
+  "xgboost__v1_9_fixed": {
+    "pooled": {
+      "precision": 0.5551,
+      "recall": 0.6717,
+      "f1": 0.6078,
+      "accuracy": 0.5734,
+      "specificity": 0.4782,
+      "roc_auc": 0.6568,
+      "pr_auc": 0.676
+    },
+    "per_participant_mean": {
+      "precision": 0.5278,
+      "recall": 0.6878,
+      "f1": 0.5739,
+      "accuracy": 0.5745,
+      "roc_auc": 0.661,
+      "pr_auc": 0.6948
+    },
+    "per_participant_std": {
+      "precision": 0.2221,
+      "recall": 0.3243,
+      "f1": 0.2312,
+      "accuracy": 0.1606,
+      "roc_auc": 0.2515,
+      "pr_auc": 0.2031
+    },
+    "worst_participant_recall": 0.0,
+    "video_level_correct": "14/24",
+    "video_level_accuracy": 0.5833,
+    "n_windows": 6585,
+    "chosen_window_s": {
+      "60": 9,
+      "30": 2,
+      "15": 1
+    }
+  },
+  "xgboost__v2_12": {
+    "pooled": {
+      "precision": 0.5633,
+      "recall": 0.7251,
+      "f1": 0.634,
+      "accuracy": 0.588,
+      "specificity": 0.4551,
+      "roc_auc": 0.6811,
+      "pr_auc": 0.6779
+    },
+    "per_participant_mean": {
+      "precision": 0.6045,
+      "recall": 0.7333,
+      "f1": 0.6096,
+      "accuracy": 0.5888,
+      "roc_auc": 0.6861,
+      "pr_auc": 0.7228
+    },
+    "per_participant_std": {
+      "precision": 0.256,
+      "recall": 0.3147,
+      "f1": 0.213,
+      "accuracy": 0.1614,
+      "roc_auc": 0.2508,
+      "pr_auc": 0.2017
+    },
+    "worst_participant_recall": 0.0,
+    "video_level_correct": "14/24",
+    "video_level_accuracy": 0.5833,
+    "n_windows": 6585,
+    "chosen_window_s": {
+      "60": 9,
+      "30": 2,
+      "15": 1
+    }
+  },
+  "xgboost__v2_12_no_pose": {
+    "pooled": {
+      "precision": 0.5537,
+      "recall": 0.8002,
+      "f1": 0.6545,
+      "accuracy": 0.5842,
+      "specificity": 0.375,
+      "roc_auc": 0.6624,
+      "pr_auc": 0.6573
+    },
+    "per_participant_mean": {
+      "precision": 0.6164,
+      "recall": 0.8088,
+      "f1": 0.6514,
+      "accuracy": 0.5858,
+      "roc_auc": 0.7441,
+      "pr_auc": 0.7378
+    },
+    "per_participant_std": {
+      "precision": 0.1779,
+      "recall": 0.2192,
+      "f1": 0.1102,
+      "accuracy": 0.1389,
+      "roc_auc": 0.1463,
+      "pr_auc": 0.1542
+    },
+    "worst_participant_recall": 0.2776,
+    "video_level_correct": "15/24",
+    "video_level_accuracy": 0.625,
+    "n_windows": 6511,
+    "chosen_window_s": {
+      "60": 11,
+      "30": 1
+    }
+  },
+  "_meta": {
+    "elapsed_s": 555,
+    "participants": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ]
+  }
+}
